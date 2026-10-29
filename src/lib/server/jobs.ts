@@ -35,7 +35,7 @@ export async function findJobByKey(key: string): Promise<StageJob | null> {
   return ref ? findJob(ref.id) : null;
 }
 
-const OUTPUT_KIND: Record<StageName, OutputKind> = { scene: "image", "vfx-ltx": "video", "vfx-reveal": "video" };
+const OUTPUT_KIND: Record<StageName, OutputKind> = { scene: "image", "vfx-ltx": "video", "vfx-reveal": "video", "hero-h3": "video" };
 const OUTPUT_EXTENSION: Record<OutputKind, string> = { image: "png", video: "mp4" };
 
 interface CreateJobInput {

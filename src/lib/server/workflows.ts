@@ -138,25 +138,57 @@ const bindVfxReveal: Binder = async (workflow, client, { imagePath, endImagePath
   workflow.setInput("92:11", "noise_seed", seed);
   workflow.setInput("92:67", "noise_seed", seed);
 
-  workflow.setInput("207", "width", size.width);
-  workflow.setInput("207", "height", size.height);
+  await bindSleevePaste(workflow, { canvas: "207", region: "208", place: "209" }, size, endImagePath, pasteRect);
+};
+
+// MiniMax H3 base renders natively at 768p on the short side; sides on a 32 px grid.
+const HERO_SIZE: Record<AspectRatio, Size> = {
+  "9:16": { width: 768, height: 1344 },
+  "1:1": { width: 768, height: 768 },
+  "16:9": { width: 1344, height: 768 },
+  "3:4": { width: 768, height: 1024 },
+};
+const DEFAULT_HERO_SECONDS = 4;
+
+/** Size and place the sleeve-paste mask, mapping source pixels through the frames' center-crop resize. */
+async function bindSleevePaste(workflow: Workflow, nodes: { canvas: string; region: string; place: string }, size: Size, endImagePath: string, pasteRect?: Rect): Promise<void> {
+  workflow.setInput(nodes.canvas, "width", size.width);
+  workflow.setInput(nodes.canvas, "height", size.height);
   if (!pasteRect) {
-    workflow.setInput("208", "value", 0);
+    workflow.setInput(nodes.region, "value", 0);
     return;
   }
   const source = await imageSizeFromFile(endImagePath);
   if (!source.width || !source.height) throw new Error(`Cannot read image size: ${path.basename(endImagePath)}`);
   const mapped = mapRectToCover(pasteRect, { width: source.width, height: source.height }, size);
-  workflow.setInput("208", "width", mapped.width);
-  workflow.setInput("208", "height", mapped.height);
-  workflow.setInput("209", "x", mapped.x);
-  workflow.setInput("209", "y", mapped.y);
+  workflow.setInput(nodes.region, "width", mapped.width);
+  workflow.setInput(nodes.region, "height", mapped.height);
+  workflow.setInput(nodes.place, "x", mapped.x);
+  workflow.setInput(nodes.place, "y", mapped.y);
+}
+
+const bindHero: Binder = async (workflow, client, { imagePath, endImagePath, pasteRect, aspect, prompt, seed, durationSeconds }) => {
+  if (!endImagePath) throw new Error("The H3 hero needs a last frame (endImagePath).");
+  const size = HERO_SIZE[aspect];
+  workflow.setInput("114", "image", client.assets.fromFile(imagePath));
+  workflow.setInput("131", "image", client.assets.fromFile(endImagePath));
+  for (const node of ["130", "132"]) {
+    workflow.setInput(node, "resize_type.width", size.width);
+    workflow.setInput(node, "resize_type.height", size.height);
+  }
+  workflow.setInput("105:104", "width", size.width);
+  workflow.setInput("105:104", "height", size.height);
+  workflow.setInput("105:104", "prompt", prompt);
+  workflow.setInput("105:15", "noise_seed", seed);
+  workflow.setInput("105:111", "value", durationSeconds ?? DEFAULT_HERO_SECONDS);
+  await bindSleevePaste(workflow, { canvas: "140", region: "141", place: "142" }, size, endImagePath, pasteRect);
 };
 
 const STAGES: Record<StageName, StageSpec> = {
   scene: { file: "scene.json", bind: bindScene },
   "vfx-ltx": { file: "vfx-ltx.json", bind: bindVfxSingle },
   "vfx-reveal": { file: "vfx-ltx-reveal.json", bind: bindVfxReveal },
+  "hero-h3": { file: "hero-h3.json", bind: bindHero },
 };
 
 export async function buildWorkflow(client: Comfy, stage: StageName, params: StageParams): Promise<Workflow> {

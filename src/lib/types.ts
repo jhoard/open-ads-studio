@@ -1,5 +1,8 @@
-/** vfx-ltx: single image to clip (M0 page). vfx-reveal: first + last keyframe reveal with sleeve paste. */
-export type StageName = "scene" | "vfx-ltx" | "vfx-reveal";
+/**
+ * vfx-ltx: single image to clip (M0 page). vfx-reveal: LTX-2 first + last keyframe reveal with sleeve paste.
+ * hero-h3: MiniMax H3 first + last keyframe hero with native audio, same sleeve paste.
+ */
+export type StageName = "scene" | "vfx-ltx" | "vfx-reveal" | "hero-h3";
 
 export const ASPECT_RATIOS = ["9:16", "1:1", "16:9", "3:4"] as const;
 export type AspectRatio = (typeof ASPECT_RATIOS)[number];
@@ -70,6 +73,8 @@ export interface StageParams {
   pasteRect?: Rect;
   /** VFX only: last-keyframe guide strength; the workflow default is 0.7. */
   endStrength?: number;
+  /** Hero only: clip length in seconds (H3 snaps to its 17k+5 frame grid at 24 fps). */
+  durationSeconds?: number;
 }
 
 export type JobStatus = "queued" | "running" | "canceling" | "succeeded" | "canceled" | "failed" | "expired";
