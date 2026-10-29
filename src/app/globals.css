@@ -1,6 +1,6 @@
-/* Open Ads Studio: dark studio. The creative is the light source; everything else recedes.
-   Every color, radius, space and duration below is a token. Brand theming overrides
-   --color-panel and --color-accent on .shell; both are registered so the switch animates. */
+/* Open Ads Studio: neutral dark studio. The app has its own identity; brand color and type
+   appear only inside brand content (the kit card on Brand, and the creatives). Every color,
+   radius, space and duration below is a token. */
 
 @font-face {
   font-family: "Gilda Display";
@@ -23,27 +23,30 @@
   font-display: swap;
 }
 
-@property --color-panel {
+/* Brand-scoped colors, set only on the kit card; registered so switching kits animates there. */
+@property --kit-surface {
   syntax: "<color>";
   inherits: true;
-  initial-value: #181816;
+  initial-value: #232322;
 }
 
-@property --color-accent {
+@property --kit-accent {
   syntax: "<color>";
   inherits: true;
-  initial-value: #cfc6ba;
+  initial-value: #ece9e2;
 }
 
 :root {
-  /* Base palette */
+  /* Base palette: near-black canvas, graphite panels, off-white text, one cool app accent */
   --color-canvas: #0f0f0e;
-  --color-panel: #181816;
-  --color-ink: #f2eadf;
-  --color-accent: #cfc6ba;
+  --color-panel: #1a1a19;
+  --color-raised: #232322;
+  --color-ink: #ece9e2;
+  --color-accent: #8ea7ff;
+  /* The restored-glyph highlight on Review: an app signal, not taken from any brand. */
+  --color-glyph: #f3d08a;
 
-  /* Derived: one step lighter surfaces, quiet text and lines from the cream ink */
-  --color-raised: color-mix(in srgb, var(--color-panel) 90%, var(--color-ink));
+  /* Derived: quiet text and lines from the off-white ink */
   --color-sunken: color-mix(in srgb, var(--color-panel) 55%, var(--color-canvas));
   --color-muted: color-mix(in srgb, var(--color-ink) 64%, var(--color-canvas));
   --color-line: color-mix(in srgb, var(--color-ink) 14%, transparent);
@@ -56,7 +59,8 @@
   --color-error: #ec8b7f;
   --scrim: color-mix(in srgb, var(--color-canvas) 55%, transparent);
 
-  /* Type: the brand's Didone for display, Lato for the interface */
+  /* Type: Lato for the interface; the Didone only for the label-match figure and brand content */
+  --font-ui: "Lato", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
   --font-display: "Gilda Display", "Iowan Old Style", Georgia, serif;
   --font-body: "Lato", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
   --text-xs: 0.75rem;
@@ -145,7 +149,6 @@ h3 {
   display: grid;
   grid-template-columns: var(--rail-width) var(--controls-width) minmax(0, 1fr);
   min-height: 100vh;
-  transition: --color-panel var(--duration-theme) var(--ease-out), --color-accent var(--duration-theme) var(--ease-out);
 }
 
 .rail {
@@ -161,12 +164,16 @@ h3 {
 }
 
 .rail-mark {
+  display: grid;
   margin: 0;
   text-align: center;
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-  line-height: 1.15;
-  color: var(--color-accent);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
+  overflow-wrap: normal;
 }
 
 .rail ol {
@@ -256,14 +263,14 @@ h3 {
 
 .step-title {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: var(--text-2xl);
   line-height: 1.05;
 }
 
 .step-subtitle {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: var(--text-lg);
 }
 
@@ -344,7 +351,7 @@ h3 {
 
 .preview-title {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: var(--text-xl);
 }
 
@@ -367,7 +374,7 @@ h3 {
   font-family: var(--font-display);
   font-size: var(--text-hero);
   line-height: 1;
-  color: var(--color-accent);
+  color: var(--color-ink);
   font-variant-numeric: tabular-nums;
 }
 
@@ -383,7 +390,7 @@ h3 {
   max-height: calc(100vh - 12rem);
   aspect-ratio: auto;
   pointer-events: none;
-  background: var(--color-accent);
+  background: var(--color-glyph);
   mask: var(--glyphs-url) center / contain no-repeat;
   -webkit-mask: var(--glyphs-url) center / contain no-repeat;
   mix-blend-mode: screen;
@@ -408,21 +415,24 @@ h3 {
   gap: var(--space-5);
   padding: var(--space-7);
   border-radius: var(--radius-lg);
-  background: var(--color-panel);
+  /* Brand-scoped: the only surface in the app that takes the kit's own colors. */
+  background: var(--kit-surface);
+  color: var(--kit-ink, var(--color-ink));
   box-shadow: var(--shadow-stage);
+  transition: --kit-surface var(--duration-theme) var(--ease-out), --kit-accent var(--duration-theme) var(--ease-out);
 }
 
 .brand-lockup-mark {
   width: min(360px, 60vw);
   aspect-ratio: 503 / 296;
-  background: var(--color-accent);
+  background: var(--kit-accent);
   mask: var(--logo-url) center / contain no-repeat;
   -webkit-mask: var(--logo-url) center / contain no-repeat;
 }
 
 .brand-lockup-tagline {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--kit-font, var(--font-ui));
   font-size: var(--text-xl);
 }
 
@@ -878,7 +888,8 @@ textarea {
 
 .recipe-body h3 {
   margin: 0 0 var(--space-1);
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
+  font-weight: 700;
   font-size: var(--text-lg);
   line-height: 1.1;
 }
@@ -1235,4 +1246,104 @@ textarea {
   .glyph-pulse {
     opacity: 0.35;
   }
+}
+
+/* Brand step: import link, kit header, crawled logos and hero images */
+
+.link-row {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.link-button {
+  padding: 0;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.link-button:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
+}
+
+.link-button:focus-visible {
+  outline: var(--ring-width) solid var(--color-accent);
+  outline-offset: var(--ring-offset);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.kit-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid var(--color-line);
+}
+
+.brand-lockup-logo {
+  max-width: min(320px, 60vw);
+  max-height: 160px;
+  object-fit: contain;
+}
+
+.brand-lockup-name {
+  margin: 0;
+  font-family: var(--kit-font, var(--font-ui));
+  font-size: var(--text-hero);
+  line-height: 1;
+  color: var(--kit-accent);
+}
+
+/* Type specimen: the kit's typography, set inside the brand card only. */
+.brand-specimen {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: center;
+  text-align: center;
+}
+
+.brand-specimen-glyphs {
+  font-family: var(--kit-font, var(--font-ui));
+  font-size: var(--text-2xl);
+  line-height: 1;
+  color: var(--kit-accent);
+}
+
+.brand-specimen-note {
+  max-width: 44ch;
+  font-size: var(--text-xs);
+  color: color-mix(in srgb, var(--kit-ink, var(--color-ink)) 70%, transparent);
+}
+
+.brand-lockup-heroes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: var(--space-2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.brand-lockup-heroes img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-xs);
 }

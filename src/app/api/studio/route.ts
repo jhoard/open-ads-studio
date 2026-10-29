@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { RECIPES } from "@/lib/recipes";
 import { loadBrand, loadBrandSafety, loadCopyLines, loadProduct, protectMaskPath } from "@/lib/server/catalog";
+import { cachedKit } from "@/lib/server/brand-extract";
 import { GENERATION_MODE } from "@/lib/server/config";
 import type { StudioData } from "@/lib/studio";
 import type { ApiError } from "@/lib/types";
@@ -23,7 +24,8 @@ export async function GET(): Promise<NextResponse<StudioData | ApiError>> {
     const share = product.protectMask ? await protectedShare(protectMaskPath(product)) : null;
     return NextResponse.json({
       mode: GENERATION_MODE,
-      brand: { ...brand, logoUrl: assetUrl(brand.logo) },
+      brand: await cachedKit(brand, assetUrl(brand.logo)),
+      directionCatalog: brand.sceneDirections,
       product: {
         name: product.name,
         description: product.description,

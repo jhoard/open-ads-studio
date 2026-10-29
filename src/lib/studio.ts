@@ -1,6 +1,7 @@
+import type { BrandKit } from "@/lib/brand-kit";
 import type { ClaimsGuard } from "@/lib/claims-guard";
 import type { RecipeInfo } from "@/lib/recipes";
-import type { Brand, JobView } from "@/lib/types";
+import type { JobView, SceneDirection } from "@/lib/types";
 
 // What the studio page loads in one call. Client-safe: URLs only, no server paths.
 
@@ -30,7 +31,9 @@ export interface BrandSafety {
 
 export interface StudioData {
   mode: "live" | "demo";
-  brand: Brand & { logoUrl: string };
+  brand: BrandKit;
+  /** Every scene direction the app can render; kits pick from these. */
+  directionCatalog: SceneDirection[];
   product: StudioProduct;
   recipes: readonly RecipeInfo[];
   safety: BrandSafety;

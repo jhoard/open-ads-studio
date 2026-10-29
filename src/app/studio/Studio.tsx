@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import type { BrandKit } from "@/lib/brand-kit";
 import { useCreatives, type CreateRequest } from "@/lib/client/useCreatives";
 import { DIRECTION_EXAMPLES } from "@/lib/directions";
 import { findRecipe } from "@/lib/recipes";
@@ -38,16 +39,6 @@ interface Preview {
   empty?: string;
 }
 
-const hexOf = (brand: StudioData["brand"], token: string): string | undefined => brand.palette.find((color) => color.token === token)?.hex;
-
-/** Once the kit loads, the studio wears the brand: its card color for surfaces, its foil for the accent. */
-function brandTheme(brand: StudioData["brand"] | null, loaded: boolean): CSSProperties | undefined {
-  if (!brand || !loaded) return undefined;
-  const surface = hexOf(brand, "bottle-green") ?? brand.palette[0]?.hex;
-  const accent = hexOf(brand, "brushed-gold") ?? brand.palette[1]?.hex;
-  return { ...(surface ? { "--color-panel": surface } : {}), ...(accent ? { "--color-accent": accent } : {}) } as CSSProperties;
-}
-
 const mediaOf = (creative: Creative, raw: boolean): PreviewMedia => ({
   kind: creative.outputKind ?? "image",
   url: raw && creative.rawUrl ? creative.rawUrl : (creative.outputUrl as string),
@@ -57,8 +48,7 @@ const mediaOf = (creative: Creative, raw: boolean): PreviewMedia => ({
 export function Studio() {
   const [data, setData] = useState<StudioData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [brand, setBrand] = useState<StudioData["brand"] | null>(null);
-  const [brandLoaded, setBrandLoaded] = useState(false);
+  const [brand, setBrand] = useState<BrandKit | null>(null);
   const [protectConfirmed, setProtectConfirmed] = useState(false);
   const [showProtect, setShowProtect] = useState(true);
   const [step, setStep] = useState(0);
@@ -85,17 +75,16 @@ export function Studio() {
     window.scrollTo({ top: 0 });
   }, [step]);
 
-  // A returning visitor with creatives already made has been through Brand and Protect.
+  // A returning visitor with creatives already made has been through Protect.
   const hasCreatives = studio.creatives.length > 0;
   useEffect(() => {
-    if (!hasCreatives) return;
-    setBrandLoaded(true);
-    setProtectConfirmed(true);
+    if (hasCreatives) setProtectConfirmed(true);
   }, [hasCreatives]);
 
   const onCreatePreview = useCallback((preview: CreatePreview) => setCreatePreview(preview), []);
 
-  const unlocked = [true, brandLoaded, brandLoaded && protectConfirmed, hasCreatives, studio.approved.size > 0];
+  // Tauvel is preloaded, so Product is open from the start.
+  const unlocked = [true, true, protectConfirmed, hasCreatives, studio.approved.size > 0];
   const approvedCreatives = studio.creatives.filter((creative) => studio.approved.has(creative.id) && creative.outputUrl);
   const sceneSourceId = studio.creatives.find((creative) => !creative.demo && creative.stage === "scene-relight" && creative.status === "succeeded")?.id ?? null;
   const pool = step === EXPORT ? approvedCreatives : studio.creatives;
@@ -115,7 +104,7 @@ export function Studio() {
 
   const preview = useMemo((): Preview | null => {
     if (!data || !brand) return null;
-    if (step === BRAND) return { media: null, title: brandLoaded ? brand.name : "Brand kit", detail: brandLoaded ? brand.tone : undefined };
+    if (step === BRAND) return { media: null, title: brand.name, detail: brand.tone || brand.website || undefined };
     if (step === PRODUCT) {
       const share = data.product.protectedShare === null ? "" : `${(data.product.protectedShare * 100).toFixed(1)}% of the photo is protected`;
       return { media: { kind: "image", url: data.product.photoUrl }, title: data.product.name, detail: share };
@@ -141,7 +130,7 @@ export function Studio() {
       reveal: step === REVIEW && scored && !raw ? { from: selected.modelLabelMatch as number, to: selected.labelMatch as number } : null,
       revealKey: selected.id,
     };
-  }, [data, brand, brandLoaded, step, createPreview, selected, showModel, studio.copy]);
+  }, [data, brand, step, createPreview, selected, showModel, studio.copy]);
 
   const protectOverlay =
     step === PRODUCT && showProtect && data?.product.protectMaskUrl ? (
@@ -149,9 +138,12 @@ export function Studio() {
     ) : undefined;
 
   return (
-    <div className="shell" style={brandTheme(brand, brandLoaded)}>
+    <div className="shell">
       <nav className="rail" aria-label="Steps">
-        <p className="rail-mark">Open Ads Studio</p>
+        <p className="rail-mark" aria-label="Open Ads Studio">
+          <span>Open Ads</span>
+          <span>Studio</span>
+        </p>
         <ol>
           {STEPS.map((entry, index) => (
             <li key={entry.id}>
@@ -173,7 +165,7 @@ export function Studio() {
         {loadError && <p className="notice notice-error">{loadError}</p>}
         {data && brand ? (
           <>
-            {step === BRAND && <BrandStep brand={brand} loaded={brandLoaded} onLoad={() => setBrandLoaded(true)} onChange={setBrand} />}
+            {step === BRAND && <BrandStep kit={brand} catalog={data.directionCatalog} onKit={setBrand} />}
             {step === PRODUCT && <ProductStep product={data.product} showProtect={showProtect} onShowProtect={setShowProtect} protectConfirmed={protectConfirmed} onConfirm={setProtectConfirmed} />}
             {step === CREATE && (
               <CreateStep
@@ -240,7 +232,7 @@ export function Studio() {
           revealKey={preview.revealKey}
           empty={preview.empty}
           overlay={protectOverlay}
-          custom={step === BRAND && brand ? <BrandPreview brand={brand} loaded={brandLoaded} /> : undefined}
+          custom={step === BRAND && brand ? <BrandPreview kit={brand} /> : undefined}
         />
       )}
     </div>
