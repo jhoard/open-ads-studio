@@ -31,9 +31,14 @@ Mirrors Higgsfield Ads Studio: Brand, Product, Create, Review, Export.
 
 | Recipe | What it makes | Model | Workflow |
 |---|---|---|---|
-| Hero still | On-brand set, product composited at matched camera | Qwen-Image-Edit 2509 | workflows/scene.json |
-| Reveal | Keyframed product moment, start frame to end frame | LTX-2 19B distilled | workflows/vfx-ltx-reveal.json |
+| Hero still: Topography | Art-directed set (chocolate canyon), product seated on the detected surface at matched camera, cast shadow from the detected light, harmonized with the label protected | Qwen-Image-Edit 2509 | workflows/scene-set.json + scene-composite.json |
+| VFX clip: Molten | Calm set and a Qwen edit of it (frozen chocolate wave) as start/end keyframes, product composited identically in both, keyframed motion, protected-glyph paste | Qwen-Image-Edit 2509 + LTX-2 19B distilled | scene-set + scene-edit + scene-composite + vfx-ltx-reveal.json |
+| Reveal: Draft | Keyframed product moment, start frame to end frame, fast preview, no audio | LTX-2 19B distilled | workflows/vfx-ltx-reveal.json |
+| Reveal: Final | Same keyframes and protected paste, with native audio | MiniMax H3 (first+last frame) | workflows/hero-h3.json |
 | Hero clip | Motion with native audio | MiniMax H3 (first+last frame) | workflows/hero-h3.json |
+| Catalog still | Plain set, product composited (option B, superseded by recipes) | Qwen-Image-Edit 2509 | workflows/scene.json |
+
+- Recipe rule: nothing occludes the protected label region. Effects stay behind or below the pack.
 
 - Each recipe maps to one workflow JSON in the repo. That is the "built with ComfyUI" proof.
 
@@ -76,9 +81,9 @@ Fallback for judges: if the live key is out of credits, the deployed app serves 
 |---|---|---|---|
 | M0 | One Cloud call, image in, video out, displayed and downloadable | Wed 5:30pm | Done |
 | M1 | Cutout, scene stills (option B composite), LTX reveal, post step | Wed 9pm | Done (commit f22715f): 3 label-exact scenes in 20s, LTX reveal end strength 0.9 tested, post-vfx.ts |
-| M2 | MiniMax H3 reveal with native audio, side by side with LTX; H3 hero clip | Wed 11:59pm | In progress: H3 reveal + side by side done (c5c9edb), audio transients need a listen; hero clip next |
+| M2 | MiniMax H3 reveal with native audio, side by side with LTX; H3 hero clip | Wed 11:59pm | In progress: H3 reveal + side by side (c5c9edb); recipes Topography and Molten first pass (362f724), tweaks pending (section 14); H3 transients pending; hero clip next |
 | M3 | Brand step: cached Tauvel kit, URL field wired to Extractor | Thu 10am | |
-| M3.5 | Protect step, label-match score, recipe picker | Thu 12pm | |
+| M3.5 | Protect step, label-match score, recipe picker | Thu 12pm | Started: protect mask built (glyph pixels, assets/tauvel/packshot-v1-protect.png) and enforced by every recipe (362f724); Protect UI, label-match badge and recipe picker pending |
 | M4 | Review grid, claims guard, export sizes, end card, disclosure badge | Thu 3pm | |
 | M4.5 | Colorway preview (stretch, first to cut) | Thu 4pm | |
 | M5 | README, license, local/Runpod path verified, Vercel deploy, demo mode | Thu 6pm | |
@@ -146,6 +151,12 @@ Never cut: Protect + label match, claims guard + disclosure badge, workflow JSON
 - Wed 5:50pm: Scenes use option B (generated set + composited cutout).
 - Wed 6:05pm: VFX concept changed from free-running light sweep to a first+last frame reveal. Fixed the debris and relight.
 - Wed 6:10pm: Stop prompting LTX for audio (fixed silent track); H3 carries sound.
+- Wed 6:24pm: Reveal recipe has two modes: Draft on LTX-2 (fast preview), Final on MiniMax H3 (native audio). LTX end-frame strength default raised to 0.9 (bar SSIM 0.897 vs 0.855 at 0.7).
+- Wed 6:25pm: Shot recipes are art-directed concepts, not catalog sets: Topography (hero still) and Molten (LTX VFX). Nothing occludes the protected label region; effects stay behind or below the pack.
+- Wed 6:30pm: Protect region is the gold glyph pixels (monogram, wordmark, label copy), not rectangles, so a harmonize pass can relight the sleeve body without leaving unlit boxes around the text.
+- Wed 6:33pm: Repo public at github.com/jhoard/open-ads-studio; push after every milestone commit.
+- Wed 6:34pm: LTX video sides must be multiples of 64. 720 was silently rendered as 704 and misaligned the protected paste; 9:16 is now 704x1280.
+- Wed 6:36pm: CLAUDE.md people rule reworded: no identifiable people or likenesses; distant silhouettes for scale are fine.
 
 ## 13. Repeatable parts (future skills)
 
@@ -153,3 +164,9 @@ Never cut: Protect + label match, claims guard + disclosure badge, workflow JSON
 - **Keyframed product reveal:** start + end frame with identical camera, shared sleeve pixels, protected-region paste, post holds and push-in.
 - **Label fidelity check:** protected region + SSIM score.
 - **Claims guard:** category to risk rating to blocked/substantiation phrases to disclosure label.
+
+## 14. Pending tweaks
+
+- Topography: stronger chocolate + contour-strata wording, broad foreground plateau instead of "rim", harmonize at 0.5 with sun side named.
+- Molten: end strength 0.6 to 0.7 and more frames so the wave builds over ~2s; add a pool reflection under the pack so it doesn't hover.
+- H3 transients at 1.8s/2.9s: pending
