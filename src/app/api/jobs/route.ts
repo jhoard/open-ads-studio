@@ -19,6 +19,12 @@ const SIGNATURES: Record<string, (bytes: Uint8Array) => boolean> = {
 
 const fail = (status: number, error: string): NextResponse<ApiError> => NextResponse.json({ error }, { status });
 
+// The quick single-image clip on the M0 page: no camera move, no lighting change.
+const QUICK_CLIP_PROMPT =
+  "A premium product shot. The product stays perfectly still and in sharp focus, its label and logo never change. Bright, even, white studio light throughout. Locked-off camera, the scene settles gently and naturally.";
+const QUICK_CLIP_ASPECT = "16:9";
+const QUICK_CLIP_SEED = 10;
+
 export async function POST(request: Request): Promise<NextResponse<JobView | ApiError>> {
   let form: FormData;
   try {
@@ -46,7 +52,14 @@ export async function POST(request: Request): Promise<NextResponse<JobView | Api
   try {
     await mkdir(path.dirname(imagePath), { recursive: true });
     await writeFile(imagePath, bytes);
-    const record = await createJob({ id, stage: "vfx-ltx", idempotencyKey, imagePath });
+    const record = await createJob({
+      id,
+      stage: "vfx-ltx",
+      runId: id,
+      label: "Quick clip",
+      idempotencyKey,
+      params: { imagePath, aspect: QUICK_CLIP_ASPECT, prompt: QUICK_CLIP_PROMPT, seed: QUICK_CLIP_SEED },
+    });
     return NextResponse.json(toView(record), { status: 201 });
   } catch (error: unknown) {
     const { status, ...body } = describeError(error);

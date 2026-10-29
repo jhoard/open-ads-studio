@@ -15,7 +15,8 @@ Source: Tauvel design directions (prompts.json, Jul 2026), updated for the unise
 ## Palette
 | Token | Hex | Use |
 |---|---|---|
-| espresso | #2B1A12 | primary wrapper, dark grounds |
+| bottle-green | #1F3A2E | primary sleeve (chosen Oct 28 2026, replaces espresso) |
+| espresso | #2B1A12 | dark grounds, chocolate tones in scenes |
 | cacao | #4A2E21 | secondary surfaces, shadows |
 | brushed-gold | #B8925A | foil, monogram, accents |
 | cream | #F2EADF | light grounds, type on dark |
@@ -31,7 +32,7 @@ Source: Tauvel design directions (prompts.json, Jul 2026), updated for the unise
 - Monogram: a single refined "T" inside a thin circle, brushed gold. Embossed on every chocolate square.
 
 ## Packaging
-- Rigid folded paperboard sleeve, soft-touch matte espresso, over a brushed-gold foil inner wrap.
+- Rigid folded paperboard sleeve, soft-touch matte bottle green (#1F3A2E), over a brushed-gold foil inner wrap.
 - Fine topographic contour lines blind-embossed tone-on-tone across the sleeve.
 - Gold hot-foil wordmark and monogram on the front.
 

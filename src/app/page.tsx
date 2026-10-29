@@ -104,10 +104,10 @@ export default function StudioPage() {
         <section className="panel" aria-labelledby="output-heading">
           <h2 id="output-heading">2 · VFX clip</h2>
           {job ? <StatusCard job={job} elapsed={elapsed} /> : <p className="meta">Nothing generated yet.</p>}
-          {job?.videoUrl ? (
+          {job?.outputUrl ? (
             <>
-              <video className="player" src={job.videoUrl} controls playsInline loop />
-              <a className="button" href={`${job.videoUrl}?download=1`} download>
+              <video className="player" src={job.outputUrl} controls playsInline loop />
+              <a className="button" href={`${job.outputUrl}?download=1`} download>
                 Download MP4
               </a>
             </>

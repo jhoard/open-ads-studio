@@ -14,3 +14,4 @@ models/
 *.tsbuildinfo
 .playwright-mcp/
 next-env.d.ts
+.claude/settings.local.json

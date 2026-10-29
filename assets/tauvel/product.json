@@ -1,0 +1,26 @@
+{
+  "id": "tauvel-bar",
+  "name": "Tauvel dark chocolate with coffee and creatine",
+  "pageUrl": "",
+  "description": "Dark chocolate infused with coffee, with 5 g creatine. One unisex 60 g bar in a bottle-green sleeve with gold foil.",
+  "category": "Food & beverage",
+  "photos": [
+    "packshot-v1-green.png",
+    "unwrapped-v1-green.png",
+    "reveal-start.png",
+    "reveal-end.png"
+  ],
+  "primaryPhoto": "packshot-v1-green.png",
+  "photoNote": "Input packshots made with GPT Image (James's own Tauvel IP); all generation in the app is open weights. Swap the packshot by changing primaryPhoto.",
+  "reveal": {
+    "start": "reveal-start.png",
+    "end": "reveal-end.png",
+    "sleeveRect": {
+      "x": 336,
+      "y": 392,
+      "width": 424,
+      "height": 812
+    },
+    "note": "reveal-start.png carries reveal-end.png's sleeve pixels inside sleeveRect (bit-exact copy; untouched original is closed-matched-v1-green.png). The video pastes reveal-end's sleeve region onto every frame, below the foil line (y 378 in source px)."
+  }
+}

@@ -2,7 +2,7 @@ import { Comfy, ComfyError, Forbidden, InsufficientCredits, MissingCredentials, 
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { TERMINAL_STATUSES, type JobStatus, type JobView, type StageJob, type StageName } from "@/lib/types";
+import { TERMINAL_STATUSES, type JobStatus, type JobView, type OutputKind, type StageJob, type StageName, type StageParams } from "@/lib/types";
 import { WAIT_TIMEOUT_SECONDS, dataPath } from "./config";
 import { buildWorkflow } from "./workflows";
 
@@ -35,28 +35,38 @@ export async function findJobByKey(key: string): Promise<StageJob | null> {
   return ref ? findJob(ref.id) : null;
 }
 
+const OUTPUT_KIND: Record<StageName, OutputKind> = { scene: "image", "vfx-ltx": "video", "vfx-reveal": "video" };
+const OUTPUT_EXTENSION: Record<OutputKind, string> = { image: "png", video: "mp4" };
+
 interface CreateJobInput {
   id: string;
   stage: StageName;
+  runId: string;
+  label: string;
   idempotencyKey: string;
-  imagePath: string;
+  params: StageParams;
 }
 
-export async function createJob({ id, stage, idempotencyKey, imagePath }: CreateJobInput): Promise<StageJob> {
+export async function createJob({ id, stage, runId, label, idempotencyKey, params }: CreateJobInput): Promise<StageJob> {
   const client = new Comfy();
-  const workflow = await buildWorkflow(client, stage, imagePath);
+  const workflow = await buildWorkflow(client, stage, params);
   const submitted = await client.submit(workflow);
   const now = new Date().toISOString();
   const record: StageJob = {
     id,
     idempotencyKey,
     stage,
+    runId,
+    label,
+    aspect: params.aspect,
+    seed: params.seed,
     comfyJobId: submitted.id,
     status: submitted.status as JobStatus,
     queuePosition: submitted.queuePosition,
     errorType: null,
     errorMessage: null,
     outputFile: null,
+    outputKind: null,
     createdAt: now,
     updatedAt: now,
     startedAt: null,
@@ -86,17 +96,18 @@ export async function syncJob(record: StageJob): Promise<StageJob> {
   };
 
   if (status === "succeeded" && !record.outputFile) {
+    const kind = OUTPUT_KIND[record.stage];
     // Comfy Cloud reports SaveVideo outputs as type "image", so match on the MIME type.
-    const video = job.outputs.find((output) => output.type === "video" || output.contentType.startsWith("video/"));
-    if (video) {
-      const file = `${record.id}.mp4`;
+    const output = job.outputs.find((candidate) => candidate.contentType.startsWith(`${kind}/`));
+    if (output) {
+      const file = `${record.id}.${OUTPUT_EXTENSION[kind]}`;
       const tmp = outputPath(`${file}.${randomUUID()}.tmp`);
       await mkdir(path.dirname(tmp), { recursive: true });
-      await video.toFile(tmp);
+      await output.toFile(tmp);
       await rename(tmp, outputPath(file));
-      next = { ...next, outputFile: file };
+      next = { ...next, outputFile: file, outputKind: kind };
     } else {
-      next = { ...next, status: "failed", errorType: "no_video_output", errorMessage: "The workflow finished without a video output." };
+      next = { ...next, status: "failed", errorType: `no_${kind}_output`, errorMessage: `The workflow finished without an ${kind} output.` };
     }
   }
 
@@ -108,6 +119,10 @@ export function toView(record: StageJob): JobView {
   return {
     id: record.id,
     stage: record.stage,
+    runId: record.runId,
+    label: record.label,
+    aspect: record.aspect,
+    seed: record.seed,
     comfyJobId: record.comfyJobId,
     status: record.status,
     queuePosition: record.queuePosition,
@@ -116,7 +131,8 @@ export function toView(record: StageJob): JobView {
     createdAt: record.createdAt,
     startedAt: record.startedAt,
     completedAt: record.completedAt,
-    videoUrl: record.outputFile ? `/api/jobs/${record.id}/video` : null,
+    outputUrl: record.outputFile ? `/api/jobs/${record.id}/output` : null,
+    outputKind: record.outputKind,
     waitTimeoutSeconds: WAIT_TIMEOUT_SECONDS,
   };
 }

@@ -1,0 +1,45 @@
+{
+  "id": "tauvel",
+  "name": "Tauvel",
+  "website": "",
+  "source": "assets/tauvel/DESIGN.md (cached brand kit; replaced by the Design Extractor output in M3)",
+  "tagline": "Strength, crafted in chocolate.",
+  "logo": "logo.svg",
+  "palette": [
+    { "token": "bottle-green", "hex": "#1F3A2E", "use": "primary sleeve" },
+    { "token": "espresso", "hex": "#2B1A12", "use": "dark grounds, chocolate tones in scenes" },
+    { "token": "cacao", "hex": "#4A2E21", "use": "secondary surfaces, shadows" },
+    { "token": "brushed-gold", "hex": "#B8925A", "use": "foil, monogram, accents" },
+    { "token": "cream", "hex": "#F2EADF", "use": "light grounds, type on dark" },
+    { "token": "stone", "hex": "#CFC6BA", "use": "props, surfaces" }
+  ],
+  "typography": {
+    "display": "High-contrast Didone serif, uppercase, wide letterspacing",
+    "supporting": "Small letterspaced sans caps"
+  },
+  "tone": "Luxury craft chocolate first, performance second. Calm, editorial, premium. Never gym-bro, never neon.",
+  "audience": "Adults with a daily ritual (coffee, training, focused work) who buy premium food.",
+  "sceneDirections": [
+    {
+      "id": "travertine-morning",
+      "label": "Travertine morning",
+      "surface": "a warm travertine stone plinth",
+      "props": "a small ceramic espresso cup on a saucer beside it",
+      "light": "soft directional morning daylight from the left with long gentle shadows"
+    },
+    {
+      "id": "linen-ritual",
+      "label": "Linen ritual",
+      "surface": "a cream linen cloth with soft natural folds",
+      "props": "a few cacao nibs and whole roasted coffee beans scattered in front",
+      "light": "diffused window light, calm and airy"
+    },
+    {
+      "id": "dark-stone-evening",
+      "label": "Dark stone evening",
+      "surface": "a dark warm espresso-toned stone slab",
+      "props": "a handful of roasted coffee beans and a curl of dark chocolate shavings",
+      "light": "low raking golden light with deep soft shadows"
+    }
+  ]
+}
