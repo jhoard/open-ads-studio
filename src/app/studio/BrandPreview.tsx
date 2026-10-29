@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 import type { BrandKit } from "@/lib/brand-kit";
 
 function kitFont(kit: BrandKit): string {
-  if (kit.source === "cached") return "var(--font-display)";
+  if (kit.source === "cached") return "var(--font-brand)";
   const family = kit.typography.display.split(",")[0]?.trim();
   return family ? `"${family}", var(--font-ui)` : "var(--font-ui)";
 }
