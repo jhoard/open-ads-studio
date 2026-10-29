@@ -16,11 +16,11 @@ Product photo + brand URL in. On-brand ad stills and short video with audio out.
 
 Open Weights Only track + "VFX built with LTX" bonus + "Built with MiniMax H3" bonus.
 
-HARD CONSTRAINT: every generation step uses open-weight models only. No partner nodes, no closed APIs. FLUX 3 is closed (API only) and is NOT allowed. If a step cannot be done open-weight, stop and flag it. Never silently substitute a closed model.
+HARD CONSTRAINT: every generation step uses open-weight models only. No partner nodes, no closed APIs. FLUX 3 API models (hosted, closed) remain disallowed. If a step cannot be done open-weight, stop and flag it. Never silently substitute a closed model.
 
 Model allowlist:
 - Background removal: BiRefNet or RMBG-2.0
-- Product-in-scene stills: Qwen-Image-Edit 2509 or FLUX.1 Kontext dev
+- Product-in-scene stills: Qwen-Image-Edit 2509, FLUX.1 Kontext dev, or FLUX 3 Image Klein (5.6B, open weights since Oct 15 2026, FLUX Kommunity License)
 - VFX clip: LTX-2 (image-to-video)
 - Hero clip with native audio: MiniMax H3 (image-to-video, first/last-frame mode available, up to 2K / 15s)
 

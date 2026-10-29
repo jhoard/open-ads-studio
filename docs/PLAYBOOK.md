@@ -68,7 +68,7 @@ Fallback for judges: if the live key is out of credits, the deployed app serves 
 
 ## 4. Pipeline rules (do not break)
 
-- Open weights only for every generation step. No partner nodes, no closed APIs. FLUX 3 is not allowed.
+- Open weights only for every generation step. No partner nodes, no closed APIs. FLUX 3 Image Klein (open weights, FLUX Kommunity License) is allowed; FLUX 3 API models are not.
 - Product pixels are sacred: the protected region is pasted from the source, never regenerated.
 - Motion is keyframed (first + last frame). Free-running image-to-video invents debris and relights the scene.
 - The distilled LTX runs at cfg 1, so negative prompts do nothing. Steer by describing what should happen, in bright studio light terms. No "warm", "key light", "particles".
@@ -160,6 +160,7 @@ Never cut: Protect + label match, claims guard + disclosure badge, workflow JSON
 - Wed 7:14pm: Scene recipe is relight in place: Qwen-Image-Edit takes the packshot itself, the box is detected (Qwen reframes the shot), and only the glyphs are pasted back, tone-matched by local face luminance, with a 25% flipped copy fading into the reflection. Cut-and-drop retired; Molten cut (can't integrate with liquid).
 - Wed 7:50pm: Cinemagraph for the presentation: the Scene still as both H3 keyframes, glyph paste per frame; seed 7 picked (seed 42 had a 2-frame spark and relit the box).
 - Wed 8:10pm: Demo mode is the default on Vercel, so the public link cannot spend credits.
+- Wed 8:20pm: Correction: FLUX 3 Image Klein (5.6B) is open weights (Oct 15 2026, FLUX Kommunity License) and allowed; FLUX 3 API models stay disallowed. Checked Comfy Cloud's live catalog: core ComfyUI has the flux3 text-encoder type, but no FLUX 3 Image Klein weights are hosted (only FLUX.2 Klein 4B/9B and the API-only Flux3* nodes), so the Klein vs Qwen Scene test did not run.
 
 ## 13. Repeatable parts (future skills)
 
