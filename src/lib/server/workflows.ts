@@ -196,6 +196,7 @@ const STAGES: Record<StageName, StageSpec> = {
   scene: { file: "scene.json", bind: bindScene, outputNode: "469" },
   "scene-set": { file: "scene-set.json", bind: bindSceneSet, outputNode: "469" },
   "scene-edit": { file: "scene-edit.json", bind: bindSceneEdit, outputNode: "469" },
+  "scene-relight": { file: "scene-edit.json", bind: bindSceneEdit, outputNode: "469" },
   "scene-composite": { file: "scene-composite.json", bind: bindSceneComposite, outputNode: "469", extraOutputs: { protectMask: "68" } },
   "vfx-ltx": { file: "vfx-ltx.json", bind: bindVfxSingle, outputNode: "75" },
   "vfx-reveal": { file: "vfx-ltx-reveal.json", bind: bindVfxReveal, outputNode: "75" },

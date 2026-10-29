@@ -3,8 +3,10 @@
  * (empty concept set, edit of a set, then seat + shadow + harmonize + protected-glyph paste).
  * vfx-ltx: single image to clip (M0 page). vfx-reveal: LTX-2 first + last keyframe reveal with protected paste.
  * hero-h3: MiniMax H3 first + last keyframe hero with native audio, same paste.
+ * scene-relight: the Scene recipe. Qwen relights the packshot in place, then the box is detected and
+ * only the protected glyphs are pasted back (tone-matched, plus their reflection).
  */
-export type StageName = "scene" | "scene-set" | "scene-edit" | "scene-composite" | "vfx-ltx" | "vfx-reveal" | "hero-h3";
+export type StageName = "scene" | "scene-set" | "scene-edit" | "scene-composite" | "scene-relight" | "vfx-ltx" | "vfx-reveal" | "hero-h3";
 
 export const ASPECT_RATIOS = ["9:16", "1:1", "16:9", "3:4"] as const;
 export type AspectRatio = (typeof ASPECT_RATIOS)[number];
@@ -122,6 +124,10 @@ export interface StageJob {
   outputKind: OutputKind | null;
   /** Secondary outputs by name, for example the placed protect mask of a composite. */
   extraFiles?: Record<string, string>;
+  /** Post-step inputs for scene-relight: the source packshot and its protect mask (server paths). */
+  glyphPaste?: { packshotPath: string; protectMaskPath: string };
+  /** Label match after the glyph paste, and of the model's own output, 0 to 1. */
+  labelMatch?: { final: number; model: number };
   createdAt: string;
   updatedAt: string;
   startedAt: string | null;
@@ -146,6 +152,10 @@ export interface JobView {
   completedAt: string | null;
   outputUrl: string | null;
   outputKind: OutputKind | null;
+  /** The model's output before the glyph paste, when the stage has one. */
+  rawUrl: string | null;
+  labelMatch: number | null;
+  modelLabelMatch: number | null;
   waitTimeoutSeconds: number;
 }
 

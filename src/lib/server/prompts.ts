@@ -26,3 +26,18 @@ export function vfxPrompt(brand: Brand, direction: SceneDirection): string {
     "Quiet ambient room tone with a soft low shimmer.",
   ].join(" ");
 }
+
+/** Scene (relight in place): the packshot stays where it is; the model rebuilds the set and the light around it. */
+export function relightPrompt(direction: SceneDirection): string {
+  return (
+    "Keep the product box exactly as it is: same position, same size, straight-on, same packaging and lettering. " +
+    `Replace only the background and surface: the box stands on ${direction.surface}, lit by ${direction.light}, ` +
+    `${direction.props}, a soft reflection of the box on the surface under it, and a contact shadow at its base. ` +
+    "Relight the box to match. Photographic, premium still life."
+  );
+}
+
+export const REVEAL_PROMPT =
+  "The chocolate bar slowly rises out of the green sleeve, the gold foil unfolds and crinkles open, revealing glossy squares with an embossed T monogram. " +
+  "Bright, even, white studio light throughout. Locked-off camera, nothing else in the scene moves.";
+export const REVEAL_SOUND = " Sound: soft foil crinkle, quiet studio room tone.";

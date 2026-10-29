@@ -18,10 +18,13 @@ function stream(file: string, start: number, end: number): ReadableStream {
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
   const record = UUID_PATTERN.test(id) ? await findJob(id) : null;
-  if (!record?.outputFile) return new Response("Not found", { status: 404 });
+  // ?file=raw serves the model's output before the glyph paste, for the side-by-side.
+  const wantsRaw = new URL(request.url).searchParams.get("file") === "raw";
+  const name = wantsRaw ? record?.extraFiles?.raw : record?.outputFile;
+  if (!record || !name) return new Response("Not found", { status: 404 });
 
-  const file = outputPath(record.outputFile);
-  const ext = path.extname(record.outputFile);
+  const file = outputPath(name);
+  const ext = path.extname(name);
   const contentType = CONTENT_TYPES[ext];
   if (!contentType) return new Response("Not found", { status: 404 });
   const { size } = await stat(file);

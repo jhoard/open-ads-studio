@@ -6,12 +6,36 @@
   "tagline": "Strength, crafted in chocolate.",
   "logo": "logo.svg",
   "palette": [
-    { "token": "bottle-green", "hex": "#1F3A2E", "use": "primary sleeve" },
-    { "token": "espresso", "hex": "#2B1A12", "use": "dark grounds, chocolate tones in scenes" },
-    { "token": "cacao", "hex": "#4A2E21", "use": "secondary surfaces, shadows" },
-    { "token": "brushed-gold", "hex": "#B8925A", "use": "foil, monogram, accents" },
-    { "token": "cream", "hex": "#F2EADF", "use": "light grounds, type on dark" },
-    { "token": "stone", "hex": "#CFC6BA", "use": "props, surfaces" }
+    {
+      "token": "bottle-green",
+      "hex": "#1F3A2E",
+      "use": "primary sleeve"
+    },
+    {
+      "token": "espresso",
+      "hex": "#2B1A12",
+      "use": "dark grounds, chocolate tones in scenes"
+    },
+    {
+      "token": "cacao",
+      "hex": "#4A2E21",
+      "use": "secondary surfaces, shadows"
+    },
+    {
+      "token": "brushed-gold",
+      "hex": "#B8925A",
+      "use": "foil, monogram, accents"
+    },
+    {
+      "token": "cream",
+      "hex": "#F2EADF",
+      "use": "light grounds, type on dark"
+    },
+    {
+      "token": "stone",
+      "hex": "#CFC6BA",
+      "use": "props, surfaces"
+    }
   ],
   "typography": {
     "display": "High-contrast Didone serif, uppercase, wide letterspacing",
@@ -20,6 +44,13 @@
   "tone": "Luxury craft chocolate first, performance second. Calm, editorial, premium. Never gym-bro, never neon.",
   "audience": "Adults with a daily ritual (coffee, training, focused work) who buy premium food.",
   "sceneDirections": [
+    {
+      "id": "slate-beam",
+      "label": "Slate beam",
+      "surface": "a dark slate surface",
+      "props": "a small espresso cup beside the box on the right",
+      "light": "a single hard beam of warm light from the left, deep shadow on the right"
+    },
     {
       "id": "travertine-morning",
       "label": "Travertine morning",

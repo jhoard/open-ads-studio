@@ -34,6 +34,7 @@ Mirrors Higgsfield Ads Studio: Brand, Product, Create, Review, Export.
 | Scene (hero still) | The packshot itself goes in; Qwen rebuilds set and light around it (dark slate, hard beam, espresso cup, reflection). The box is detected, then only the protected glyphs are pasted back, tone-matched to the scene, plus a fading flipped copy in the reflection | Qwen-Image-Edit 2509 | workflows/scene-edit.json + src/lib/server/glyph-paste.ts |
 | Reveal: Draft | Keyframed product moment, start frame to end frame, fast preview, no audio | LTX-2 19B distilled | workflows/vfx-ltx-reveal.json |
 | Reveal: Final | Same keyframes and protected paste, with native audio | MiniMax H3 (first+last frame) | workflows/hero-h3.json |
+| Cinemagraph | A finished Scene still as both H3 keyframes: steam, drifting beam, motes, room tone. Glyph paste on every frame, tone-matched per frame | MiniMax H3 (first+last frame) | workflows/hero-h3.json + scripts/run-cinemagraph.ts (not in the UI yet) |
 | Hero clip | Motion with native audio | MiniMax H3 (first+last frame) | workflows/hero-h3.json |
 | Retired | Cut-and-drop compositing (catalog set, Topography, Molten): the pack read as a sticker and could not integrate with liquid | Qwen-Image-Edit 2509 | scene.json, scene-set.json, scene-composite.json (kept in repo) |
 
@@ -81,8 +82,8 @@ Fallback for judges: if the live key is out of credits, the deployed app serves 
 | M0 | One Cloud call, image in, video out, displayed and downloadable | Wed 5:30pm | Done |
 | M1 | Cutout, scene stills (option B composite), LTX reveal, post step | Wed 9pm | Done (commit f22715f): 3 label-exact scenes in 20s, LTX reveal end strength 0.9 tested, post-vfx.ts |
 | M2 | MiniMax H3 reveal with native audio, side by side with LTX; H3 hero clip | Wed 11:59pm | Done for the demo: H3 reveal + side by side (c5c9edb); Scene still passed (relight in place + glyph paste). H3 transients pending James's listen; hero clip is cut-list item 4 |
-| M3 | Real UI flow replacing the M0 page: Brand (cached Tauvel kit, URL field), Product with Protect, Create with recipes, Review, Export | Thu 10am | Started |
-| M3.5 | Protect step, label-match score, recipe picker | Thu 12pm | Started: protect mask built (glyph pixels, assets/tauvel/packshot-v1-protect.png) and enforced by every recipe (362f724); Protect UI, label-match badge and recipe picker pending |
+| M3 | Real UI flow replacing the M0 page: Brand (cached Tauvel kit, URL field), Product with Protect, Create with recipes, Review, Export | Thu 10am | Done: five-step studio; live Scene run end to end through the UI (label match 99.9%, model alone 58.7%); demo mode by default on Vercel |
+| M3.5 | Protect step, label-match score, recipe picker | Thu 12pm | Started: protect mask built (glyph pixels, assets/tauvel/packshot-v1-protect.png) and enforced by every recipe (362f724); Protect view, label-match badge and recipe picker shipped in M3; user-drawn protect for a new upload pending |
 | M4 | Review grid, claims guard, export sizes, end card, disclosure badge | Thu 3pm | |
 | M4.5 | Colorway preview (stretch, first to cut) | Thu 4pm | |
 | M5 | README, license, local/Runpod path verified, Vercel deploy, demo mode | Thu 6pm | |
@@ -157,6 +158,8 @@ Never cut: Protect + label match, claims guard + disclosure badge, workflow JSON
 - Wed 6:34pm: LTX video sides must be multiples of 64. 720 was silently rendered as 704 and misaligned the protected paste; 9:16 is now 704x1280.
 - Wed 6:36pm: CLAUDE.md people rule reworded: no identifiable people or likenesses; distant silhouettes for scale are fine.
 - Wed 7:14pm: Scene recipe is relight in place: Qwen-Image-Edit takes the packshot itself, the box is detected (Qwen reframes the shot), and only the glyphs are pasted back, tone-matched by local face luminance, with a 25% flipped copy fading into the reflection. Cut-and-drop retired; Molten cut (can't integrate with liquid).
+- Wed 7:50pm: Cinemagraph for the presentation: the Scene still as both H3 keyframes, glyph paste per frame; seed 7 picked (seed 42 had a 2-frame spark and relit the box).
+- Wed 8:10pm: Demo mode is the default on Vercel, so the public link cannot spend credits.
 
 ## 13. Repeatable parts (future skills)
 
@@ -169,6 +172,7 @@ Never cut: Protect + label match, claims guard + disclosure badge, workflow JSON
 
 - Still test: passed. Scene = relight in place + glyph paste (tone-matched, plus reflected glyphs); cut-and-drop retired, Molten cut. Seed 7 example (var/relight/s7/fast-2-final.png) is the Scene example in the UI.
 - H3 transients at 1.8s/2.9s: pending
-- Live link: rate limit or demo mode by default before the link goes public.
-- Page copy promises native audio from LTX; fix when the M3 flow replaces it.
-- Live link storage (found from code, not yet tested live): job records, uploads and outputs go to `var/` on local disk, which is read-only on Vercel outside /tmp and not shared between function instances, so submits from the deployed app will fail. Move to Vercel Blob (planned in M5) before relying on the live link.
+- Live link: done. Demo mode is the default on Vercel (GENERATION_MODE unset): Create returns the bundled example renders and never calls Comfy. A rate limit is still needed before setting GENERATION_MODE=live there.
+- Page copy promising native audio from LTX: gone with the M0 page.
+- Cinemagraph in the UI: add as a recipe that chains off an approved Scene.
+- Live link storage (found from code, not yet tested live): job records, uploads and outputs go to `var/` on local disk, which is read-only on Vercel outside /tmp and not shared between function instances, so live submits from the deployed app would fail. Demo mode sidesteps it; move to Vercel Blob (planned in M5) before turning live mode on there.

@@ -6,7 +6,7 @@ Product photo + brand kit in. Label-exact ad stills and short video with audio o
 
 **What makes it different:** AI ad tools garble packaging. Open Ads Studio never lets a model repaint the label. The model relights the real packshot in place, then its gold glyphs, a protected region, are found and pasted back tone-matched to the scene, and motion is keyframed from first and last frames.
 
-**Live:** https://open-ads-studio.vercel.app (early build, auto-deployed from `main`).
+**Live:** https://open-ads-studio.vercel.app (demo mode: example renders, auto-deployed from `main`).
 
 > Status: in active development during the event. See [`docs/PLAYBOOK.md`](docs/PLAYBOOK.md) for the plan, milestones and decisions.
 
@@ -17,6 +17,7 @@ Product photo + brand kit in. Label-exact ad stills and short video with audio o
 | Scene | Hero still: the packshot relit in place on an art-directed set | Qwen-Image-Edit 2509 | `scene-edit.json` + glyph paste |
 | Reveal (Draft) | The bar rises out of the sleeve, fast preview | LTX-2 19B distilled | `vfx-ltx-reveal.json` |
 | Reveal (Final) | Same reveal with native audio | MiniMax H3-Base FL2VA | `hero-h3.json` |
+| Cinemagraph | A Scene still comes alive: steam, light, room tone | MiniMax H3-Base FL2VA | `hero-h3.json` + per-frame glyph paste |
 
 Deterministic steps (no model): box detection and the protected-glyph paste (tone-matched, plus its reflection), and post (`scripts/post-vfx.ts`: frame holds and an eased push-in, via ffmpeg).
 
@@ -36,10 +37,13 @@ npm run dev               # http://localhost:3000
 
 The key stays server-side. `.env` is loaded with override, so it beats any key in your shell.
 
+`GENERATION_MODE=demo` serves the bundled example renders and never calls Comfy; it is the default on Vercel, so a public link cannot spend credits. Locally the default is `live`.
+
 Run recipes from the command line:
 
 ```bash
 npx tsx scripts/run-relight.ts                                  # Scene still (relight in place + glyph paste)
+npx tsx scripts/run-cinemagraph.ts <scene.png>                  # Cinemagraph from a finished Scene
 npx tsx scripts/run-vfx.ts vfx-reveal 3:4 "<motion prompt>"     # Reveal, Draft (LTX-2)
 npx tsx scripts/run-vfx.ts hero-h3 3:4 "<motion prompt>"        # Reveal, Final (H3)
 npx tsx scripts/post-vfx.ts in.mp4 out.mp4                      # holds + push-in

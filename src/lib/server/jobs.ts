@@ -4,6 +4,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { TERMINAL_STATUSES, type JobStatus, type JobView, type OutputKind, type StageJob, type StageName, type StageParams } from "@/lib/types";
 import { WAIT_TIMEOUT_SECONDS, dataPath } from "./config";
+import { alignPackshot, pasteGlyphs } from "./glyph-paste";
 import { buildWorkflow, stageOutputs } from "./workflows";
 
 const MAX_ERROR_MESSAGE_LENGTH = 500;
@@ -40,6 +41,7 @@ const OUTPUT_KIND: Record<StageName, OutputKind> = {
   "scene-set": "image",
   "scene-edit": "image",
   "scene-composite": "image",
+  "scene-relight": "image",
   "vfx-ltx": "video",
   "vfx-reveal": "video",
   "hero-h3": "video",
@@ -53,9 +55,10 @@ interface CreateJobInput {
   label: string;
   idempotencyKey: string;
   params: StageParams;
+  glyphPaste?: StageJob["glyphPaste"];
 }
 
-export async function createJob({ id, stage, runId, label, idempotencyKey, params }: CreateJobInput): Promise<StageJob> {
+export async function createJob({ id, stage, runId, label, idempotencyKey, params, glyphPaste }: CreateJobInput): Promise<StageJob> {
   const client = new Comfy();
   const workflow = await buildWorkflow(client, stage, params);
   const submitted = await client.submit(workflow);
@@ -79,6 +82,7 @@ export async function createJob({ id, stage, runId, label, idempotencyKey, param
     updatedAt: now,
     startedAt: null,
     completedAt: null,
+    ...(glyphPaste ? { glyphPaste } : {}),
   };
   await writeJson(jobFile(id), record);
   await writeJson(keyFile(idempotencyKey), { id });
@@ -94,9 +98,34 @@ async function saveOutput(output: JobOutput, file: string): Promise<void> {
   await rename(tmp, outputPath(file));
 }
 
+/** Scene post-step: find the box in the model's output and paste the protected glyphs back over it. */
+async function finishGlyphPaste(record: StageJob, rawFile: string): Promise<Partial<StageJob>> {
+  const { packshotPath, protectMaskPath } = record.glyphPaste as NonNullable<StageJob["glyphPaste"]>;
+  const finalFile = `${record.id}.final.png`;
+  try {
+    const align = await alignPackshot(packshotPath, outputPath(rawFile), protectMaskPath);
+    const result = await pasteGlyphs(packshotPath, outputPath(rawFile), protectMaskPath, align, outputPath(finalFile));
+    return { outputFile: finalFile, extraFiles: { raw: rawFile }, labelMatch: { final: result.labelMatch, model: result.modelLabelMatch } };
+  } catch (error: unknown) {
+    console.error("glyph paste failed", record.id, error);
+    return { status: "failed", errorType: "glyph_paste_failed", errorMessage: "The scene rendered, but the label could not be located and restored.", extraFiles: { raw: rawFile } };
+  }
+}
+
+// Polls can overlap while a slow post-step runs; one sync per job at a time.
+const inFlight = new Map<string, Promise<StageJob>>();
+
 /** Rebuild the Comfy job from its stored ID, persist the new state, and collect the outputs once. */
-export async function syncJob(record: StageJob): Promise<StageJob> {
-  if (TERMINAL_STATUSES.includes(record.status)) return record;
+export function syncJob(record: StageJob): Promise<StageJob> {
+  if (TERMINAL_STATUSES.includes(record.status)) return Promise.resolve(record);
+  const running = inFlight.get(record.id);
+  if (running) return running;
+  const sync = syncOnce(record).finally(() => inFlight.delete(record.id));
+  inFlight.set(record.id, sync);
+  return sync;
+}
+
+async function syncOnce(record: StageJob): Promise<StageJob> {
 
   const job = await new Comfy().jobs.get(record.comfyJobId);
   const status = job.status as JobStatus;
@@ -129,6 +158,7 @@ export async function syncJob(record: StageJob): Promise<StageJob> {
         await saveOutput(extra, extraFiles[name]);
       }
       next = { ...next, outputFile: file, outputKind: kind, extraFiles };
+      if (record.glyphPaste) next = { ...next, ...(await finishGlyphPaste(record, file)) };
     } else {
       next = { ...next, status: "failed", errorType: `no_${kind}_output`, errorMessage: `The workflow finished without an ${kind} output at node ${outputNode}.` };
     }
@@ -156,6 +186,9 @@ export function toView(record: StageJob): JobView {
     completedAt: record.completedAt,
     outputUrl: record.outputFile ? `/api/jobs/${record.id}/output` : null,
     outputKind: record.outputKind,
+    rawUrl: record.extraFiles?.raw ? `/api/jobs/${record.id}/output?file=raw` : null,
+    labelMatch: record.labelMatch?.final ?? null,
+    modelLabelMatch: record.labelMatch?.model ?? null,
     waitTimeoutSeconds: WAIT_TIMEOUT_SECONDS,
   };
 }
