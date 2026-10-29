@@ -45,3 +45,9 @@ Review automatically shows an aligned divider between the raw model output and t
 Videos share play/pause, seek and mute controls; only the restored version supplies audio. Playback drift is corrected when it exceeds 80ms. Cached metadata is read on mount as well as through events, avoiding disabled playback when metadata loaded before hydration.
 
 Verified the actual Review path using cached Scene assets in a demo-only local server, slider endpoints and arrow keys, and 390px reflow without horizontal overflow. A temporary local fixture verified cached video play and seeking on both video elements; the fixture was removed. TypeScript and production build passed. No model generation was performed. Current screenshot: img/studio-comparison-default.png. The earlier toggle-based screenshot is retained as iteration history.
+
+## Duplicate review entries
+
+Review and Export collapse repeated cached examples with the same recipe, output, objective and copy. Live generations remain separate unless they repeat the same job ID. Approved representatives retain their status. Approve/unapprove and Remove apply to the whole displayed duplicate group, so a hidden repeat cannot reappear after an action. Distinct copy edits remain separate. Server-side generation history is unchanged.
+
+Verified two cached Scene rows become one after reload, with approval toggling correctly in both directions. Six regression tests cover cached duplicates, live job identity, distinct objectives/copy, approved representatives and pending outputs. TypeScript and production build passed. Screenshot: img/studio-review-deduplicated.png.

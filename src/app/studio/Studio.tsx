@@ -5,6 +5,7 @@ import type { BrandKit } from "@/lib/brand-kit";
 import { useCreatives, type CreateRequest } from "@/lib/client/useCreatives";
 import { DIRECTION_EXAMPLES } from "@/lib/directions";
 import { findRecipe } from "@/lib/recipes";
+import { distinctReviewCreatives, reviewCreativeKey } from "@/lib/review-creatives";
 import type { Creative, Objective, StudioData } from "@/lib/studio";
 import type { ApiError } from "@/lib/types";
 import { BrandPreview } from "./BrandPreview";
@@ -83,7 +84,8 @@ export function Studio() {
   }, [step]);
 
   // A returning visitor with creatives already made has been through Protect.
-  const hasCreatives = studio.creatives.length > 0;
+  const reviewCreatives = distinctReviewCreatives(studio.creatives, studio.copy, studio.approved);
+  const hasCreatives = reviewCreatives.length > 0;
   useEffect(() => {
     if (hasCreatives) setProtectConfirmed(true);
   }, [hasCreatives]);
@@ -92,9 +94,9 @@ export function Studio() {
 
   // Tauvel is preloaded, so Product is open from the start.
   const unlocked = [true, true, protectConfirmed, hasCreatives, studio.approved.size > 0];
-  const approvedCreatives = studio.creatives.filter((creative) => studio.approved.has(creative.id) && creative.outputUrl);
+  const approvedCreatives = reviewCreatives.filter((creative) => studio.approved.has(creative.id) && creative.outputUrl);
   const sceneSourceId = studio.creatives.find((creative) => !creative.demo && creative.stage === "scene-relight" && creative.status === "succeeded")?.id ?? null;
-  const pool = step === EXPORT ? approvedCreatives : studio.creatives;
+  const pool = step === EXPORT ? approvedCreatives : reviewCreatives;
   const selected = pool.find((creative) => creative.id === selectedId) ?? pool[0] ?? null;
 
   const create = async (requests: CreateRequest[], objective: Objective): Promise<void> => {
@@ -105,6 +107,24 @@ export function Studio() {
 
   const select = (id: string): void => {
     setSelectedId(id);
+  };
+
+  const matchingReviewIds = (id: string): string[] => {
+    const creative = studio.creatives.find((entry) => entry.id === id);
+    if (!creative) return [];
+    const key = reviewCreativeKey(creative, studio.copy);
+    return [...new Set(studio.creatives.filter((entry) => reviewCreativeKey(entry, studio.copy) === key).map((entry) => entry.id))];
+  };
+
+  const toggleReviewApproval = (id: string): void => {
+    const nextApproved = !studio.approved.has(id);
+    for (const match of matchingReviewIds(id)) {
+      if (studio.approved.has(match) !== nextApproved) studio.toggleApproved(match);
+    }
+  };
+
+  const removeReview = (id: string): void => {
+    for (const match of matchingReviewIds(id)) studio.remove(match);
   };
 
   const preview = useMemo((): Preview | null => {
@@ -199,7 +219,7 @@ export function Studio() {
             )}
             {step === REVIEW && (
               <ReviewStep
-                creatives={studio.creatives}
+                creatives={reviewCreatives}
                 selected={selected}
                 approved={studio.approved}
                 copy={studio.copy}
@@ -207,8 +227,8 @@ export function Studio() {
                 safety={data.safety}
                 onSelect={select}
                 onCopyChange={studio.setCopy}
-                onToggleApproved={studio.toggleApproved}
-                onRemove={studio.remove}
+                onToggleApproved={toggleReviewApproval}
+                onRemove={removeReview}
               />
             )}
             {step === EXPORT && (
