@@ -355,3 +355,12 @@ export async function pasteGlyphs(packshotPath: string, editedPath: string, mask
   };
 }
 
+
+/** The protect mask moved onto the creative as an alpha PNG, so the UI can light up exactly the restored glyphs. */
+export async function placedGlyphMask(packshotPath: string, maskPath: string, align: Alignment, canvas: { width: number; height: number }): Promise<Buffer> {
+  const meta = await sharp(packshotPath).metadata();
+  const size = { width: meta.width as number, height: meta.height as number };
+  const alpha = await placeOnCanvas(sharp(maskPath).greyscale(), align, size, canvas, 1);
+  const white = sharp({ create: { ...canvas, channels: 3, background: "#ffffff" } });
+  return white.joinChannel(alpha, { raw: { ...canvas, channels: 1 } }).png().toBuffer();
+}

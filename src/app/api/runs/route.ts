@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { DEFAULT_DIRECTION, DIRECTION_EXAMPLES } from "@/lib/directions";
 import { findRecipe, type RecipeId } from "@/lib/recipes";
 import { loadBrand, loadProduct } from "@/lib/server/catalog";
 import { GENERATION_MODE } from "@/lib/server/config";
@@ -23,9 +24,11 @@ interface RunBody {
 }
 
 /** Demo mode: the recipe's bundled example, shaped like a finished job. */
-function demoCreative(recipe: RecipeId, idempotencyKey: string): Creative {
+function demoCreative(recipe: RecipeId, idempotencyKey: string, directionId: string | undefined): Creative {
   const info = findRecipe(recipe);
   if (!info) throw new Error(`unknown recipe ${recipe}`);
+  // A Scene shows the chosen direction's render when one exists.
+  const example = recipe === "scene" ? (DIRECTION_EXAMPLES[directionId ?? DEFAULT_DIRECTION] ?? info.example) : info.example;
   const now = new Date().toISOString();
   return {
     id: `demo-${recipe}-${idempotencyKey.slice(0, 8)}`,
@@ -44,11 +47,12 @@ function demoCreative(recipe: RecipeId, idempotencyKey: string): Creative {
     createdAt: now,
     startedAt: now,
     completedAt: now,
-    outputUrl: info.example.url,
-    outputKind: info.example.kind,
-    rawUrl: info.example.rawUrl ?? null,
-    labelMatch: info.example.labelMatch ?? null,
-    modelLabelMatch: info.example.modelLabelMatch ?? null,
+    outputUrl: example.url,
+    outputKind: example.kind,
+    rawUrl: example.rawUrl ?? null,
+    glyphsUrl: example.glyphsUrl ?? null,
+    labelMatch: example.labelMatch ?? null,
+    modelLabelMatch: example.modelLabelMatch ?? null,
     waitTimeoutSeconds: 0,
   };
 }
@@ -67,7 +71,7 @@ export async function POST(request: Request): Promise<NextResponse<Creative | Ap
   if (body.sourceCreativeId !== undefined && !(typeof body.sourceCreativeId === "string" && UUID_PATTERN.test(body.sourceCreativeId))) return fail(400, "Invalid source creative.");
   if (body.seed !== undefined && !(Number.isInteger(body.seed) && (body.seed as number) >= 0 && (body.seed as number) <= MAX_SEED)) return fail(400, "Seed must be a non-negative integer.");
 
-  if (GENERATION_MODE === "demo") return NextResponse.json(demoCreative(recipe.id, body.idempotencyKey));
+  if (GENERATION_MODE === "demo") return NextResponse.json(demoCreative(recipe.id, body.idempotencyKey, body.directionId as string | undefined));
 
   const existing = await findJobByKey(body.idempotencyKey);
   if (existing) return NextResponse.json({ ...toView(existing), recipe: recipe.id, demo: false });

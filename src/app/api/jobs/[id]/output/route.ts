@@ -18,9 +18,9 @@ function stream(file: string, start: number, end: number): ReadableStream {
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
   const record = UUID_PATTERN.test(id) ? await findJob(id) : null;
-  // ?file=raw serves the model's output before the glyph paste, for the side-by-side.
-  const wantsRaw = new URL(request.url).searchParams.get("file") === "raw";
-  const name = wantsRaw ? record?.extraFiles?.raw : record?.outputFile;
+  // ?file=raw is the model's output before the glyph paste; ?file=glyphs is the placed glyph mask.
+  const extra = new URL(request.url).searchParams.get("file");
+  const name = extra === "raw" || extra === "glyphs" ? record?.extraFiles?.[extra] : record?.outputFile;
   if (!record || !name) return new Response("Not found", { status: 404 });
 
   const file = outputPath(name);

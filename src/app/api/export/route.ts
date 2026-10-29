@@ -6,7 +6,8 @@ import { strToU8, zipSync } from "fflate";
 import { NextResponse } from "next/server";
 import { checkClaims } from "@/lib/claims-guard";
 import { EXPORT_SIZES, type ExportSize } from "@/lib/export-layout";
-import { findRecipe } from "@/lib/recipes";
+import { DIRECTION_EXAMPLES } from "@/lib/directions";
+import { RECIPES, findRecipe } from "@/lib/recipes";
 import { loadBrand, loadBrandSafety } from "@/lib/server/catalog";
 import { renderClip, renderStill } from "@/lib/server/export-render";
 import { findJob, outputPath } from "@/lib/server/jobs";
@@ -23,6 +24,8 @@ interface ExportBody {
   creativeId?: unknown;
   recipe?: unknown;
   demo?: unknown;
+  /** Demo creatives name the bundled file they show. */
+  exampleUrl?: unknown;
   sizes?: unknown;
   copy?: unknown;
 }
@@ -47,7 +50,10 @@ async function resolveSource(body: ExportBody): Promise<Source | string> {
   if (body.demo === true) {
     const recipe = typeof body.recipe === "string" ? findRecipe(body.recipe) : undefined;
     if (!recipe) return "Unknown recipe.";
-    const file = path.join(process.cwd(), "public", recipe.example.url.replace(/^\//, ""));
+    // Only bundled example files can be exported this way; anything else falls back to the recipe's own example.
+    const known = new Set([...RECIPES.map((entry) => entry.example.url), ...Object.values(DIRECTION_EXAMPLES).map((entry) => entry.url)]);
+    const url = typeof body.exampleUrl === "string" && known.has(body.exampleUrl) ? body.exampleUrl : recipe.example.url;
+    const file = path.join(process.cwd(), "public", url.replace(/^\//, ""));
     return { file, kind: recipe.example.kind, stage: recipe.stage, label: recipe.label, seed: null, generatedAt: null, labelMatch: recipe.example.labelMatch ?? null, example: true, fromScene: recipe.id === "cinemagraph" };
   }
   if (typeof body.creativeId !== "string" || !UUID_PATTERN.test(body.creativeId)) return "Missing creative.";

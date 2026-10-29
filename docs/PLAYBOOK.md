@@ -161,6 +161,7 @@ Never cut: Protect + label match, claims guard + disclosure badge, workflow JSON
 - Wed 7:50pm: Cinemagraph for the presentation: the Scene still as both H3 keyframes, glyph paste per frame; seed 7 picked (seed 42 had a 2-frame spark and relit the box).
 - Wed 8:10pm: Demo mode is the default on Vercel, so the public link cannot spend credits.
 - Wed 8:50pm: M4 copy lines are deterministic templates in assets/tauvel/copy.json, not a language model, so the open-weights rule holds for text too. Export text is drawn as SVG paths from bundled OFL fonts (Gilda Display, Lato) because sharp's text renderer ignored app fonts.
+- Wed 9:15pm: UI redesign: dark studio (canvas #0F0F0E), rail plus 360px controls plus a live preview of the selected creative, brand theming from the kit (Tauvel bottle green surfaces, brushed gold accent, animated). Review signature: label match counts up from the model-alone score while the restored glyphs pulse gold.
 - Wed 8:20pm: Correction: FLUX 3 Image Klein (5.6B) is open weights (Oct 15 2026, FLUX Kommunity License) and allowed; FLUX 3 API models stay disallowed. Checked Comfy Cloud's live catalog: core ComfyUI has the flux3 text-encoder type, but no FLUX 3 Image Klein weights are hosted (only FLUX.2 Klein 4B/9B and the API-only Flux3* nodes), so the Klein vs Qwen Scene test did not run.
 
 ## 13. Repeatable parts (future skills)
@@ -179,4 +180,6 @@ Never cut: Protect + label match, claims guard + disclosure badge, workflow JSON
 - Cinemagraph in the UI: done. A card on Create, live path verified (worst-frame label match 99.1%); it animates the newest finished Scene and is disabled with "Needs: a finished Scene" until one exists.
 - Clip exports need ffmpeg, which Vercel functions lack: on the live link, clip packs return 501 (stills export fine). Fix by prerendering the example clip packs or bundling an ffmpeg binary.
 - Reveal exports: the 4:5 crop clips the top of the bar slightly; anchor the crop lower for reveals.
+- Linen ritual direction: the test render (seed 7) kept a model-drawn monogram and wordmark above the restored ones, so the frame shows two. Label match (99.6%) missed it because it only scores inside the mask. Add a ghost check: compare raw vs final just outside the glyph mask, and fail when a second label is present.
+- Travertine morning: on a light plinth, the reflection-softening strip shows as a faint lighter patch under the box. Feather it into textured surfaces, or skip softening when the strip has no mirrored text.
 - Live link storage (found from code, not yet tested live): job records, uploads and outputs go to `var/` on local disk, which is read-only on Vercel outside /tmp and not shared between function instances, so live submits from the deployed app would fail. Demo mode sidesteps it; move to Vercel Blob (planned in M5) before turning live mode on there.

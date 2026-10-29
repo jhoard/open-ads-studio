@@ -8,6 +8,8 @@ import { percent } from "./CreativeCard";
 
 interface ExportStepProps {
   creatives: Creative[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
   copyFor: (creative: Creative) => string;
   safety: BrandSafety;
 }
@@ -18,7 +20,7 @@ async function downloadPack(creative: Creative, copy: string, sizes: ExportSize[
   const response = await fetch("/api/export", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ creativeId: creative.id, recipe: creative.recipe, demo: creative.demo, sizes, copy }),
+    body: JSON.stringify({ creativeId: creative.id, recipe: creative.recipe, demo: creative.demo, exampleUrl: creative.outputUrl, sizes, copy }),
   });
   if (!response.ok) {
     try {
@@ -38,7 +40,15 @@ async function downloadPack(creative: Creative, copy: string, sizes: ExportSize[
   return null;
 }
 
-function ExportRow({ creative, copy, safety }: { creative: Creative; copy: string; safety: BrandSafety }) {
+interface ExportRowProps {
+  creative: Creative;
+  copy: string;
+  safety: BrandSafety;
+  selected: boolean;
+  onSelect: () => void;
+}
+
+function ExportRow({ creative, copy, safety, selected, onSelect }: ExportRowProps) {
   const [sizes, setSizes] = useState<Set<ExportSize>>(new Set(EXPORT_SIZES));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,8 +75,10 @@ function ExportRow({ creative, copy, safety }: { creative: Creative; copy: strin
   };
 
   return (
-    <li className="export-row">
-      {creative.outputKind === "video" ? <video src={creative.outputUrl as string} muted preload="metadata" /> : <img src={creative.outputUrl as string} alt="" />}
+    <li className="export-row" data-selected={selected}>
+      <button type="button" className="export-thumb" aria-label={`Preview ${creative.label}`} aria-pressed={selected} onClick={onSelect}>
+        {creative.outputKind === "video" ? <video src={creative.outputUrl as string} muted preload="metadata" /> : <img src={creative.outputUrl as string} alt="" />}
+      </button>
       <div className="export-detail">
         <strong>{creative.label}</strong>
         <p className="hint flush">
@@ -87,19 +99,21 @@ function ExportRow({ creative, copy, safety }: { creative: Creative; copy: strin
             {error}
           </p>
         )}
+        <button className="button" type="button" disabled={busy || sizes.size === 0 || claims.status === "blocked"} onClick={download}>
+          {busy ? "Rendering" : "Download pack"}
+        </button>
       </div>
-      <button className="button" type="button" disabled={busy || sizes.size === 0 || claims.status === "blocked"} onClick={download}>
-        {busy ? "Rendering" : "Download pack"}
-      </button>
     </li>
   );
 }
 
-export function ExportStep({ creatives, copyFor, safety }: ExportStepProps) {
+export function ExportStep({ creatives, selectedId, onSelect, copyFor, safety }: ExportStepProps) {
   return (
-    <section className="panel" aria-labelledby="export-heading">
-      <h2 id="export-heading">Export</h2>
-      <p className="lede">
+    <section className="step" aria-labelledby="export-heading">
+      <h1 id="export-heading" className="step-title">
+        Export
+      </h1>
+      <p className="step-lede">
         Each pack holds the chosen sizes with the copy line, the logo and a visible AI-generated badge, a logo end card on clips, disclosure metadata in every file, and provenance.json. Basis: {safety.disclosureBasis.join(", ")}.
       </p>
       {creatives.length === 0 ? (
@@ -107,7 +121,7 @@ export function ExportStep({ creatives, copyFor, safety }: ExportStepProps) {
       ) : (
         <ul className="export-list">
           {creatives.map((creative) => (
-            <ExportRow key={creative.id} creative={creative} copy={copyFor(creative)} safety={safety} />
+            <ExportRow key={creative.id} creative={creative} copy={copyFor(creative)} safety={safety} selected={creative.id === selectedId} onSelect={() => onSelect(creative.id)} />
           ))}
         </ul>
       )}

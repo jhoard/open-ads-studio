@@ -7,7 +7,7 @@ import { TERMINAL_STATUSES, type JobStatus, type JobView, type OutputKind, type 
 import { WAIT_TIMEOUT_SECONDS, dataPath } from "./config";
 import { alignToClip, pasteClip } from "./clip-paste";
 import { HERO_SIZE } from "./geometry";
-import { alignPackshot, pasteGlyphs } from "./glyph-paste";
+import { alignPackshot, pasteGlyphs, placedGlyphMask } from "./glyph-paste";
 import { DEFAULT_POST_VFX, postVfx } from "./post-vfx";
 import { buildWorkflow, stageOutputs } from "./workflows";
 
@@ -111,7 +111,10 @@ async function finishGlyphPaste(record: StageJob, rawFile: string): Promise<Part
   try {
     const align = await alignPackshot(packshotPath, outputPath(rawFile), protectMaskPath);
     const result = await pasteGlyphs(packshotPath, outputPath(rawFile), protectMaskPath, align, outputPath(finalFile));
-    return { outputFile: finalFile, extraFiles: { raw: rawFile }, labelMatch: { final: result.labelMatch, model: result.modelLabelMatch } };
+    const glyphsFile = `${record.id}.glyphs.png`;
+    const canvas = await sharp(outputPath(rawFile)).metadata();
+    await writeFile(outputPath(glyphsFile), await placedGlyphMask(packshotPath, protectMaskPath, align, { width: canvas.width as number, height: canvas.height as number }));
+    return { outputFile: finalFile, extraFiles: { raw: rawFile, glyphs: glyphsFile }, labelMatch: { final: result.labelMatch, model: result.modelLabelMatch } };
   } catch (error: unknown) {
     console.error("glyph paste failed", record.id, error);
     return { status: "failed", errorType: "glyph_paste_failed", errorMessage: "The scene rendered, but the label could not be located and restored.", extraFiles: { raw: rawFile } };
@@ -215,6 +218,7 @@ export function toView(record: StageJob): JobView {
     outputUrl: record.outputFile ? `/api/jobs/${record.id}/output` : null,
     outputKind: record.outputKind,
     rawUrl: record.extraFiles?.raw ? `/api/jobs/${record.id}/output?file=raw` : null,
+    glyphsUrl: record.extraFiles?.glyphs ? `/api/jobs/${record.id}/output?file=glyphs` : null,
     labelMatch: record.labelMatch?.final ?? null,
     modelLabelMatch: record.labelMatch?.model ?? null,
     waitTimeoutSeconds: WAIT_TIMEOUT_SECONDS,

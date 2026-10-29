@@ -3,6 +3,7 @@
 import { useId } from "react";
 import { checkClaims, type ClaimsCheck } from "@/lib/claims-guard";
 import { OBJECTIVES, type BrandSafety, type Objective } from "@/lib/studio";
+import { Select } from "./Select";
 
 interface CopyLineProps {
   value: string;
@@ -41,7 +42,7 @@ export function CopyLine({ value, objective, lines, safety, onChange }: CopyLine
       <label className="field-label" htmlFor={`${id}-pick`}>
         Copy line
       </label>
-      <select id={`${id}-pick`} value="" onChange={(event) => event.target.value && onChange(event.target.value)}>
+      <Select id={`${id}-pick`} value="" onChange={(event) => event.target.value && onChange(event.target.value)}>
         <option value="">Suggestions from the brand kit</option>
         {ordered.map((group) => (
           <optgroup key={group} label={group[0].toUpperCase() + group.slice(1)}>
@@ -52,7 +53,7 @@ export function CopyLine({ value, objective, lines, safety, onChange }: CopyLine
             ))}
           </optgroup>
         ))}
-      </select>
+      </Select>
       <textarea aria-label="Edit copy line" value={value} maxLength={140} onChange={(event) => onChange(event.target.value)} />
       <Verdict check={claimsFor(value, safety)} />
     </div>

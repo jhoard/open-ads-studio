@@ -10,6 +10,8 @@ export interface RecipeExample {
   posterUrl?: string;
   /** Before the glyph paste, for the side-by-side. */
   rawUrl?: string;
+  /** Placed glyph mask, for the Review highlight. */
+  glyphsUrl?: string;
   labelMatch?: number;
   modelLabelMatch?: number;
 }
@@ -40,7 +42,14 @@ export const RECIPES: readonly RecipeInfo[] = [
     models: ["Qwen-Image-Edit 2509"],
     workflows: ["scene-edit.json"],
     needs: null,
-    example: { url: "/examples/scene-slate.png", kind: "image", rawUrl: "/examples/scene-slate-raw.png", labelMatch: 0.998, modelLabelMatch: 0.49 },
+    example: {
+      url: "/examples/directions/slate-beam.png",
+      kind: "image",
+      rawUrl: "/examples/directions/slate-beam-raw.png",
+      glyphsUrl: "/examples/directions/slate-beam-glyphs.png",
+      labelMatch: 0.998,
+      modelLabelMatch: 0.49,
+    },
   },
   {
     id: "reveal-draft",

@@ -156,6 +156,8 @@ export interface JobView {
   outputKind: OutputKind | null;
   /** The model's output before the glyph paste, when the stage has one. */
   rawUrl: string | null;
+  /** The restored glyphs as an alpha mask on the creative, for the Review highlight. */
+  glyphsUrl: string | null;
   labelMatch: number | null;
   modelLabelMatch: number | null;
   waitTimeoutSeconds: number;
