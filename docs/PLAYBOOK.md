@@ -86,7 +86,7 @@ Fallback for judges: if the live key is out of credits, the deployed app serves 
 | M3.5 | Protect step, label-match score, recipe picker | Thu 12pm | Started: protect mask built (glyph pixels, assets/tauvel/packshot-v1-protect.png) and enforced by every recipe (362f724); Protect view, label-match badge and recipe picker shipped in M3; user-drawn protect for a new upload pending |
 | M4 | Review grid, claims guard, export sizes, end card, disclosure badge | Thu 3pm | Done: copy lines from brand-kit templates, claims guard in the browser and again on the server (blocked = 422), risk badge, 9:16 / 1:1 / 16:9 ad layouts, logo end card on clips, AI-generated badge plus EXIF/MP4 metadata, zip pack with provenance.json and DISCLOSURE.txt; verified through the UI |
 | M4.5 | Colorway preview (stretch, first to cut) | Thu 4pm | |
-| M5 | README, license, local/Runpod path verified, Vercel deploy, demo mode | Thu 6pm | |
+| M5 | README, license, local/Runpod path verified, Vercel deploy, demo mode | Thu 6pm | Done except the local run: README "How the label stays exact" and "Run it yourself" (exact model files, ComfyUI v0.43.0+, COMFY_BASE_URL), UI-format workflows in workflows/ui with screenshots (round-trip checked in the ComfyUI frontend), Vercel 485fa88 renders all five steps in demo mode and exports a still pack. Not verified: any workflow on a self-hosted ComfyUI (local install was not approved in session); all runs so far are Comfy Cloud |
 | M6 | Record demo video, social post, submit entry form | Thu 10pm | |
 
 ## 6. Cut list (cut in this order if behind)
