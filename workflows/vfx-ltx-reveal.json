@@ -94,7 +94,7 @@
         0
       ],
       "frame_idx": -1,
-      "strength": 0.7
+      "strength": 0.9
     },
     "_meta": {
       "title": "Last frame guide (pass 1)"
@@ -124,7 +124,7 @@
         0
       ],
       "frame_idx": -1,
-      "strength": 0.7
+      "strength": 0.9
     },
     "_meta": {
       "title": "Last frame guide (pass 2)"
@@ -151,44 +151,42 @@
     }
   },
   "207": {
-    "class_type": "SolidMask",
+    "class_type": "LoadImage",
     "inputs": {
-      "value": 0.0,
-      "width": 832,
-      "height": 1088
+      "image": "paste-mask.png"
     },
     "_meta": {
-      "title": "Frame mask"
+      "title": "Input paste mask (keyframe px, white = paste)"
     }
   },
   "208": {
-    "class_type": "SolidMask",
+    "class_type": "ImageToMask",
     "inputs": {
-      "value": 1.0,
-      "width": 320,
-      "height": 630
-    },
-    "_meta": {
-      "title": "Sleeve region"
-    }
-  },
-  "209": {
-    "class_type": "MaskComposite",
-    "inputs": {
-      "destination": [
+      "image": [
         "207",
         0
       ],
-      "source": [
-        "208",
-        0
-      ],
-      "x": 0,
-      "y": 0,
-      "operation": "add"
+      "channel": "red"
     },
     "_meta": {
-      "title": "Place sleeve region"
+      "title": "Paste mask"
+    }
+  },
+  "209": {
+    "class_type": "ResizeImageMaskNode",
+    "inputs": {
+      "resize_type": "scale dimensions",
+      "resize_type.width": 1280,
+      "resize_type.height": 720,
+      "resize_type.crop": "center",
+      "scale_method": "lanczos",
+      "input": [
+        "208",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Resize paste mask like the frames"
     }
   },
   "210": {

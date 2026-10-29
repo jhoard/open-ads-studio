@@ -4,7 +4,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { TERMINAL_STATUSES, type JobStatus, type JobView, type OutputKind, type StageJob, type StageName, type StageParams } from "@/lib/types";
 import { WAIT_TIMEOUT_SECONDS, dataPath } from "./config";
-import { buildWorkflow } from "./workflows";
+import { buildWorkflow, stageOutputs } from "./workflows";
 
 const MAX_ERROR_MESSAGE_LENGTH = 500;
 
@@ -35,7 +35,15 @@ export async function findJobByKey(key: string): Promise<StageJob | null> {
   return ref ? findJob(ref.id) : null;
 }
 
-const OUTPUT_KIND: Record<StageName, OutputKind> = { scene: "image", "vfx-ltx": "video", "vfx-reveal": "video", "hero-h3": "video" };
+const OUTPUT_KIND: Record<StageName, OutputKind> = {
+  scene: "image",
+  "scene-set": "image",
+  "scene-edit": "image",
+  "scene-composite": "image",
+  "vfx-ltx": "video",
+  "vfx-reveal": "video",
+  "hero-h3": "video",
+};
 const OUTPUT_EXTENSION: Record<OutputKind, string> = { image: "png", video: "mp4" };
 
 interface CreateJobInput {
@@ -77,7 +85,16 @@ export async function createJob({ id, stage, runId, label, idempotencyKey, param
   return record;
 }
 
-/** Rebuild the Comfy job from its stored ID, persist the new state, and collect the video once. */
+type JobOutput = Awaited<ReturnType<InstanceType<typeof Comfy>["jobs"]["get"]>>["outputs"][number];
+
+async function saveOutput(output: JobOutput, file: string): Promise<void> {
+  const tmp = outputPath(`${file}.${randomUUID()}.tmp`);
+  await mkdir(path.dirname(tmp), { recursive: true });
+  await output.toFile(tmp);
+  await rename(tmp, outputPath(file));
+}
+
+/** Rebuild the Comfy job from its stored ID, persist the new state, and collect the outputs once. */
 export async function syncJob(record: StageJob): Promise<StageJob> {
   if (TERMINAL_STATUSES.includes(record.status)) return record;
 
@@ -97,17 +114,23 @@ export async function syncJob(record: StageJob): Promise<StageJob> {
 
   if (status === "succeeded" && !record.outputFile) {
     const kind = OUTPUT_KIND[record.stage];
-    // Comfy Cloud reports SaveVideo outputs as type "image", so match on the MIME type.
-    const output = job.outputs.find((candidate) => candidate.contentType.startsWith(`${kind}/`));
+    const { outputNode, extraOutputs } = stageOutputs(record.stage);
+    // Pick by node, since a workflow may save several images. Comfy Cloud reports SaveVideo
+    // outputs as type "image", so the kind check uses the MIME type.
+    const output = job.getOutputs(outputNode).find((candidate) => candidate.contentType.startsWith(`${kind}/`));
     if (output) {
       const file = `${record.id}.${OUTPUT_EXTENSION[kind]}`;
-      const tmp = outputPath(`${file}.${randomUUID()}.tmp`);
-      await mkdir(path.dirname(tmp), { recursive: true });
-      await output.toFile(tmp);
-      await rename(tmp, outputPath(file));
-      next = { ...next, outputFile: file, outputKind: kind };
+      await saveOutput(output, file);
+      const extraFiles: Record<string, string> = {};
+      for (const [name, node] of Object.entries(extraOutputs ?? {})) {
+        const extra = job.getOutputs(node)[0];
+        if (!extra) continue;
+        extraFiles[name] = `${record.id}.${name}.${OUTPUT_EXTENSION.image}`;
+        await saveOutput(extra, extraFiles[name]);
+      }
+      next = { ...next, outputFile: file, outputKind: kind, extraFiles };
     } else {
-      next = { ...next, status: "failed", errorType: `no_${kind}_output`, errorMessage: `The workflow finished without an ${kind} output.` };
+      next = { ...next, status: "failed", errorType: `no_${kind}_output`, errorMessage: `The workflow finished without an ${kind} output at node ${outputNode}.` };
     }
   }
 

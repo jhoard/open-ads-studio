@@ -1,112 +1,129 @@
 import type { Comfy } from "@comfyorg/sdk";
 import { imageSizeFromFile } from "image-size/fromFile";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import type { AspectRatio, Rect, StageName, StageParams } from "@/lib/types";
+import sharp from "sharp";
+import type { Rect, StageName, StageParams } from "@/lib/types";
+import { dataPath } from "./config";
+import {
+  HERO_SIZE,
+  PRODUCT_HEIGHT_SHARE,
+  SCENE_CANVAS,
+  VIDEO_SIZE,
+  castShadow,
+  contactShadow,
+  mapRectToCover,
+  placeProduct,
+  seatProduct,
+  type Size,
+} from "./geometry";
 
 type Workflow = Awaited<ReturnType<Comfy["workflows"]["fromFile"]>>;
-
-interface Size {
-  width: number;
-  height: number;
-}
-
-export interface Placement extends Size {
-  x: number;
-  y: number;
-}
-
-// Qwen-Image-Edit works best near one megapixel; sides are multiples of 64.
-const SCENE_CANVAS: Record<AspectRatio, Size> = {
-  "9:16": { width: 768, height: 1344 },
-  "1:1": { width: 1024, height: 1024 },
-  "16:9": { width: 1344, height: 768 },
-  "3:4": { width: 896, height: 1152 },
-};
-
-// LTX-2 renders at half size then upsamples 2x; these keep both passes on a 32 px grid.
-const VIDEO_SIZE: Record<AspectRatio, Size> = {
-  "9:16": { width: 720, height: 1280 },
-  "1:1": { width: 960, height: 960 },
-  "16:9": { width: 1280, height: 720 },
-  "3:4": { width: 832, height: 1088 },
-};
-
-// How tall the product stands in the scene, as a share of canvas height.
-const PRODUCT_HEIGHT_SHARE: Record<AspectRatio, number> = { "9:16": 0.5, "1:1": 0.62, "16:9": 0.72, "3:4": 0.56 };
-const MAX_PRODUCT_WIDTH_SHARE = 0.7;
-// Gap between the product's base and the bottom edge, so it sits on a surface rather than the frame.
-const FLOOR_MARGIN_SHARE = 0.14;
-
-/** Fit the cutout inside the canvas, centered horizontally, resting above the floor margin. */
-export function placeProduct(source: Size, canvas: Size, heightShare: number): Placement {
-  const scale = Math.min((canvas.height * heightShare) / source.height, (canvas.width * MAX_PRODUCT_WIDTH_SHARE) / source.width);
-  const width = Math.round(source.width * scale);
-  const height = Math.round(source.height * scale);
-  const x = Math.round((canvas.width - width) / 2);
-  const y = Math.max(0, Math.round(canvas.height * (1 - FLOOR_MARGIN_SHARE)) - height);
-  return { width, height, x, y };
-}
-
-// Contact shadow: a flat strip slightly wider than the product, centered on its base, blurred in the workflow.
-const SHADOW_WIDTH_SHARE = 1.08;
-const SHADOW_HEIGHT_SHARE = 0.07;
-
-export function contactShadow(place: Placement): Rect {
-  const width = Math.round(place.width * SHADOW_WIDTH_SHARE);
-  const height = Math.max(4, Math.round(place.width * SHADOW_HEIGHT_SHARE));
-  return { x: Math.round(place.x - (width - place.width) / 2), y: Math.round(place.y + place.height - height / 2), width, height };
-}
-
 type Binder = (workflow: Workflow, client: Comfy, params: StageParams) => Promise<void>;
 
 interface StageSpec {
   file: string;
   bind: Binder;
+  /** Node whose output is the stage's result. */
+  outputNode: string;
+  /** Secondary outputs kept with the job, by name. */
+  extraOutputs?: Record<string, string>;
 }
 
-const bindScene: Binder = async (workflow, client, { imagePath, aspect, prompt, seed, quality = "fast" }) => {
-  const source = await imageSizeFromFile(imagePath);
-  if (!source.width || !source.height) throw new Error(`Cannot read image size: ${path.basename(imagePath)}`);
-  const canvas = SCENE_CANVAS[aspect];
-  const place = placeProduct({ width: source.width, height: source.height }, canvas, PRODUCT_HEIGHT_SHARE[aspect]);
+const DEFAULT_HERO_SECONDS = 4;
 
-  workflow.setInput("78", "image", client.assets.fromFile(imagePath));
-  workflow.setInput("14", "width", canvas.width);
-  workflow.setInput("14", "height", canvas.height);
-  workflow.setInput("11", "width", place.width);
-  workflow.setInput("11", "height", place.height);
-  // Qwen generates an empty set; the original cutout is composited on top with a soft contact
-  // shadow, so the label stays pixel-identical to the packshot instead of being redrawn.
-  workflow.setInput("21", "x", place.x);
-  workflow.setInput("21", "y", place.y);
-  const shadow = contactShadow(place);
+async function sizeOf(imagePath: string): Promise<Size> {
+  const size = await imageSizeFromFile(imagePath);
+  if (!size.width || !size.height) throw new Error(`Cannot read image size: ${path.basename(imagePath)}`);
+  return { width: size.width, height: size.height };
+}
+
+/** The template's switch: true routes through the Lightning LoRA (4 steps, cfg 1), false runs 20 steps at cfg 4. */
+function bindQwen(workflow: Workflow, { prompt, seed, quality = "fast" }: StageParams): void {
+  workflow.setInput("433:111", "prompt", prompt);
+  workflow.setInput("433:3", "seed", seed);
+  workflow.setInput("433:443", "value", quality === "fast");
+}
+
+function bindShadows(workflow: Workflow, place: Rect, canvas: Size, cast?: Rect): void {
   for (const node of ["31", "36", "38"]) {
     workflow.setInput(node, "width", canvas.width);
     workflow.setInput(node, "height", canvas.height);
   }
-  workflow.setInput("30", "width", shadow.width);
-  workflow.setInput("30", "height", shadow.height);
-  workflow.setInput("32", "x", shadow.x);
-  workflow.setInput("32", "y", shadow.y);
-  workflow.setInput("433:111", "prompt", prompt);
-  workflow.setInput("433:3", "seed", seed);
-  // The template's switch: true routes through the Lightning LoRA (4 steps, cfg 1), false runs 20 steps at cfg 4.
-  workflow.setInput("433:443", "value", quality === "fast");
+  const contact = contactShadow(place);
+  workflow.setInput("30", "width", contact.width);
+  workflow.setInput("30", "height", contact.height);
+  workflow.setInput("32", "x", contact.x);
+  workflow.setInput("32", "y", contact.y);
+  if (!cast) return;
+  workflow.setInput("29", "width", cast.width);
+  workflow.setInput("29", "height", cast.height);
+  workflow.setInput("28", "x", cast.x);
+  workflow.setInput("28", "y", cast.y);
+}
+
+// Option B catalog still in one pass: empty set, original cutout composited with a contact shadow.
+const bindScene: Binder = async (workflow, client, params) => {
+  const canvas = SCENE_CANVAS[params.aspect];
+  const place = placeProduct(await sizeOf(params.imagePath), canvas, PRODUCT_HEIGHT_SHARE[params.aspect]);
+  workflow.setInput("78", "image", client.assets.fromFile(params.imagePath));
+  workflow.setInput("14", "width", canvas.width);
+  workflow.setInput("14", "height", canvas.height);
+  workflow.setInput("11", "width", place.width);
+  workflow.setInput("11", "height", place.height);
+  workflow.setInput("21", "x", place.x);
+  workflow.setInput("21", "y", place.y);
+  bindShadows(workflow, place, canvas);
+  bindQwen(workflow, params);
 };
 
-/** Where a source-pixel rect lands after the resize node's cover-scale and center crop. */
-export function mapRectToCover(rect: Rect, source: Size, target: Size): Rect {
-  const scale = Math.max(target.width / source.width, target.height / source.height);
-  const offsetX = (source.width * scale - target.width) / 2;
-  const offsetY = (source.height * scale - target.height) / 2;
-  const x = Math.max(0, Math.round(rect.x * scale - offsetX));
-  const y = Math.max(0, Math.round(rect.y * scale - offsetY));
-  return {
-    x,
-    y,
-    width: Math.min(target.width - x, Math.round(rect.width * scale)),
-    height: Math.min(target.height - y, Math.round(rect.height * scale)),
-  };
+// Art-directed concept set, rendered without the product.
+const bindSceneSet: Binder = async (workflow, _client, params) => {
+  const canvas = SCENE_CANVAS[params.aspect];
+  workflow.setInput("14", "width", canvas.width);
+  workflow.setInput("14", "height", canvas.height);
+  bindQwen(workflow, params);
+};
+
+// Edit an existing set (same size out), for example adding the frozen splash to a calm set.
+const bindSceneEdit: Binder = async (workflow, client, params) => {
+  workflow.setInput("78", "image", client.assets.fromFile(params.imagePath));
+  bindQwen(workflow, params);
+};
+
+// Seat the cutout on the set, shadows from the light side, harmonize, then paste the protected glyphs back.
+const bindSceneComposite: Binder = async (workflow, client, params) => {
+  const { composite } = params;
+  if (!composite) throw new Error("scene-composite needs composite parameters.");
+  const canvas = await sizeOf(composite.setImagePath);
+  const place = seatProduct(await sizeOf(params.imagePath), canvas, composite.heightShare, composite.surfaceY);
+
+  workflow.setInput("1", "image", client.assets.fromFile(composite.setImagePath));
+  workflow.setInput("78", "image", client.assets.fromFile(params.imagePath));
+  workflow.setInput("79", "image", client.assets.fromFile(composite.protectMaskPath));
+  for (const node of ["11", "61"]) {
+    workflow.setInput(node, "width", place.width);
+    workflow.setInput(node, "height", place.height);
+  }
+  for (const node of ["21", "64"]) {
+    workflow.setInput(node, "x", place.x);
+    workflow.setInput(node, "y", place.y);
+  }
+  workflow.setInput("63", "width", canvas.width);
+  workflow.setInput("63", "height", canvas.height);
+  bindShadows(workflow, place, canvas, castShadow(place, composite.lightFrom, canvas));
+  bindQwen(workflow, params);
+};
+
+/** A white-on-black mask PNG for a rect in an image's pixel space, cached by geometry. */
+async function rectMask(rect: Rect, size: Size): Promise<string> {
+  const file = dataPath("masks", `rect-${size.width}x${size.height}-${rect.x}-${rect.y}-${rect.width}-${rect.height}.png`);
+  await mkdir(path.dirname(file), { recursive: true });
+  await sharp({ create: { width: size.width, height: size.height, channels: 3, background: "#000000" } })
+    .composite([{ input: { create: { width: rect.width, height: rect.height, channels: 3, background: "#ffffff" } }, left: rect.x, top: rect.y }])
+    .png()
+    .toFile(file);
+  return file;
 }
 
 const bindVfxSingle: Binder = async (workflow, client, { imagePath, aspect, prompt, seed }) => {
@@ -119,10 +136,12 @@ const bindVfxSingle: Binder = async (workflow, client, { imagePath, aspect, prom
   workflow.setInput("92:67", "noise_seed", seed);
 };
 
-// First and last frames are both keyframed; the end frame's sleeve is pasted onto every frame
-// so label text never drifts while the bar and foil animate above it.
-const bindVfxReveal: Binder = async (workflow, client, { imagePath, endImagePath, pasteRect, endStrength, aspect, prompt, seed }) => {
+// First and last frames are both keyframed; the end frame's protected pixels are pasted onto every
+// frame (a mask image resized exactly like the frames) so label text never drifts.
+const bindVfxReveal: Binder = async (workflow, client, params) => {
+  const { imagePath, endImagePath, pasteRect, pasteMaskPath, endStrength, aspect, prompt, seed } = params;
   if (!endImagePath) throw new Error("The VFX reveal needs a last frame (endImagePath).");
+  if (!pasteMaskPath && !pasteRect) throw new Error("The VFX reveal needs a paste mask or rect.");
   if (endStrength !== undefined) {
     workflow.setInput("204", "strength", endStrength);
     workflow.setInput("205", "strength", endStrength);
@@ -130,41 +149,30 @@ const bindVfxReveal: Binder = async (workflow, client, { imagePath, endImagePath
   const size = VIDEO_SIZE[aspect];
   workflow.setInput("98", "image", client.assets.fromFile(imagePath));
   workflow.setInput("200", "image", client.assets.fromFile(endImagePath));
-  for (const node of ["102", "201"]) {
+  for (const node of ["102", "201", "209"]) {
     workflow.setInput(node, "resize_type.width", size.width);
     workflow.setInput(node, "resize_type.height", size.height);
   }
+  const mask = pasteMaskPath ?? (await rectMask(pasteRect as Rect, await sizeOf(endImagePath)));
+  workflow.setInput("207", "image", client.assets.fromFile(mask));
   workflow.setInput("92:3", "text", prompt);
   workflow.setInput("92:11", "noise_seed", seed);
   workflow.setInput("92:67", "noise_seed", seed);
-
-  await bindSleevePaste(workflow, { canvas: "207", region: "208", place: "209" }, size, endImagePath, pasteRect);
 };
 
-// MiniMax H3 base renders natively at 768p on the short side; sides on a 32 px grid.
-const HERO_SIZE: Record<AspectRatio, Size> = {
-  "9:16": { width: 768, height: 1344 },
-  "1:1": { width: 768, height: 768 },
-  "16:9": { width: 1344, height: 768 },
-  "3:4": { width: 768, height: 1024 },
-};
-const DEFAULT_HERO_SECONDS = 4;
-
-/** Size and place the sleeve-paste mask, mapping source pixels through the frames' center-crop resize. */
-async function bindSleevePaste(workflow: Workflow, nodes: { canvas: string; region: string; place: string }, size: Size, endImagePath: string, pasteRect?: Rect): Promise<void> {
-  workflow.setInput(nodes.canvas, "width", size.width);
-  workflow.setInput(nodes.canvas, "height", size.height);
+/** Size and place the H3 sleeve-paste mask, mapping source pixels through the frames' center-crop resize. */
+async function bindHeroPaste(workflow: Workflow, size: Size, endImagePath: string, pasteRect?: Rect): Promise<void> {
+  workflow.setInput("140", "width", size.width);
+  workflow.setInput("140", "height", size.height);
   if (!pasteRect) {
-    workflow.setInput(nodes.region, "value", 0);
+    workflow.setInput("141", "value", 0);
     return;
   }
-  const source = await imageSizeFromFile(endImagePath);
-  if (!source.width || !source.height) throw new Error(`Cannot read image size: ${path.basename(endImagePath)}`);
-  const mapped = mapRectToCover(pasteRect, { width: source.width, height: source.height }, size);
-  workflow.setInput(nodes.region, "width", mapped.width);
-  workflow.setInput(nodes.region, "height", mapped.height);
-  workflow.setInput(nodes.place, "x", mapped.x);
-  workflow.setInput(nodes.place, "y", mapped.y);
+  const mapped = mapRectToCover(pasteRect, await sizeOf(endImagePath), size);
+  workflow.setInput("141", "width", mapped.width);
+  workflow.setInput("141", "height", mapped.height);
+  workflow.setInput("142", "x", mapped.x);
+  workflow.setInput("142", "y", mapped.y);
 }
 
 const bindHero: Binder = async (workflow, client, { imagePath, endImagePath, pasteRect, aspect, prompt, seed, durationSeconds }) => {
@@ -181,15 +189,23 @@ const bindHero: Binder = async (workflow, client, { imagePath, endImagePath, pas
   workflow.setInput("105:104", "prompt", prompt);
   workflow.setInput("105:15", "noise_seed", seed);
   workflow.setInput("105:111", "value", durationSeconds ?? DEFAULT_HERO_SECONDS);
-  await bindSleevePaste(workflow, { canvas: "140", region: "141", place: "142" }, size, endImagePath, pasteRect);
+  await bindHeroPaste(workflow, size, endImagePath, pasteRect);
 };
 
 const STAGES: Record<StageName, StageSpec> = {
-  scene: { file: "scene.json", bind: bindScene },
-  "vfx-ltx": { file: "vfx-ltx.json", bind: bindVfxSingle },
-  "vfx-reveal": { file: "vfx-ltx-reveal.json", bind: bindVfxReveal },
-  "hero-h3": { file: "hero-h3.json", bind: bindHero },
+  scene: { file: "scene.json", bind: bindScene, outputNode: "469" },
+  "scene-set": { file: "scene-set.json", bind: bindSceneSet, outputNode: "469" },
+  "scene-edit": { file: "scene-edit.json", bind: bindSceneEdit, outputNode: "469" },
+  "scene-composite": { file: "scene-composite.json", bind: bindSceneComposite, outputNode: "469", extraOutputs: { protectMask: "68" } },
+  "vfx-ltx": { file: "vfx-ltx.json", bind: bindVfxSingle, outputNode: "75" },
+  "vfx-reveal": { file: "vfx-ltx-reveal.json", bind: bindVfxReveal, outputNode: "75" },
+  "hero-h3": { file: "hero-h3.json", bind: bindHero, outputNode: "92" },
 };
+
+export function stageOutputs(stage: StageName): Pick<StageSpec, "outputNode" | "extraOutputs"> {
+  const { outputNode, extraOutputs } = STAGES[stage];
+  return { outputNode, extraOutputs };
+}
 
 export async function buildWorkflow(client: Comfy, stage: StageName, params: StageParams): Promise<Workflow> {
   const spec = STAGES[stage];

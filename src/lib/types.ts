@@ -1,8 +1,10 @@
 /**
- * vfx-ltx: single image to clip (M0 page). vfx-reveal: LTX-2 first + last keyframe reveal with sleeve paste.
- * hero-h3: MiniMax H3 first + last keyframe hero with native audio, same sleeve paste.
+ * scene: one-pass option B still. scene-set / scene-edit / scene-composite: the art-directed recipe passes
+ * (empty concept set, edit of a set, then seat + shadow + harmonize + protected-glyph paste).
+ * vfx-ltx: single image to clip (M0 page). vfx-reveal: LTX-2 first + last keyframe reveal with protected paste.
+ * hero-h3: MiniMax H3 first + last keyframe hero with native audio, same paste.
  */
-export type StageName = "scene" | "vfx-ltx" | "vfx-reveal" | "hero-h3";
+export type StageName = "scene" | "scene-set" | "scene-edit" | "scene-composite" | "vfx-ltx" | "vfx-reveal" | "hero-h3";
 
 export const ASPECT_RATIOS = ["9:16", "1:1", "16:9", "3:4"] as const;
 export type AspectRatio = (typeof ASPECT_RATIOS)[number];
@@ -44,6 +46,8 @@ export interface Product {
   photos: string[];
   primaryPhoto: string;
   reveal?: ProductReveal;
+  /** Protect mask (M3.5) for primaryPhoto: white = label and marks, never repainted. */
+  protectMask?: string;
 }
 
 export interface Rect {
@@ -71,10 +75,27 @@ export interface StageParams {
   /** VFX only: last keyframe, and its region (source px) pasted onto every frame. */
   endImagePath?: string;
   pasteRect?: Rect;
-  /** VFX only: last-keyframe guide strength; the workflow default is 0.7. */
+  /** VFX only: last-keyframe guide strength; the workflow default is 0.9 (0.7 landed softer, SSIM 0.855 vs 0.897). */
   endStrength?: number;
   /** Hero only: clip length in seconds (H3 snaps to its 17k+5 frame grid at 24 fps). */
   durationSeconds?: number;
+  /** VFX only: mask image in keyframe px (white = paste from the end frame); takes precedence over pasteRect. */
+  pasteMaskPath?: string;
+  /** scene-composite only. */
+  composite?: CompositeParams;
+}
+
+export type LightSide = "left" | "right" | "back";
+
+export interface CompositeParams {
+  setImagePath: string;
+  /** Protected glyph mask in packshot px (white = never repainted). */
+  protectMaskPath: string;
+  /** Product height as a share of the set height. */
+  heightShare: number;
+  /** Set row where the backdrop meets the standing surface, from set analysis; null falls back to a default. */
+  surfaceY: number | null;
+  lightFrom: LightSide;
 }
 
 export type JobStatus = "queued" | "running" | "canceling" | "succeeded" | "canceled" | "failed" | "expired";
@@ -99,6 +120,8 @@ export interface StageJob {
   errorMessage: string | null;
   outputFile: string | null;
   outputKind: OutputKind | null;
+  /** Secondary outputs by name, for example the placed protect mask of a composite. */
+  extraFiles?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
   startedAt: string | null;

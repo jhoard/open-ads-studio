@@ -12,6 +12,11 @@ async function readAsset<T>(file: string): Promise<T> {
 export const loadBrand = (): Promise<Brand> => readAsset<Brand>("brand.json");
 export const loadProduct = (): Promise<Product> => readAsset<Product>("product.json");
 
+export function protectMaskPath(product: Product): string {
+  if (!product.protectMask) throw new Error(`${product.id} has no protect mask; recipes need one so the label is never repainted.`);
+  return path.join(assetDir(), path.basename(product.protectMask));
+}
+
 export function productPhotoPath(product: Product, photo: string = product.primaryPhoto): string {
   if (!product.photos.includes(photo)) throw new Error(`Unknown product photo: ${photo}`);
   return path.join(assetDir(), path.basename(photo));

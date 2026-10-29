@@ -1,0 +1,708 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "set.png"
+    },
+    "_meta": {
+      "title": "Input set"
+    }
+  },
+  "10": {
+    "class_type": "BiRefNetRMBG",
+    "inputs": {
+      "image": [
+        "78",
+        0
+      ],
+      "model": "BiRefNet-general",
+      "mask_blur": 0,
+      "mask_offset": 0,
+      "invert_output": false,
+      "refine_foreground": true,
+      "background": "Alpha",
+      "background_color": "#222222"
+    },
+    "_meta": {
+      "title": "Cutout (BiRefNet)"
+    }
+  },
+  "11": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "image": [
+        "10",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": 400,
+      "height": 800,
+      "crop": "disabled"
+    },
+    "_meta": {
+      "title": "Scale cutout"
+    }
+  },
+  "12": {
+    "class_type": "SplitImageWithAlpha",
+    "inputs": {
+      "image": [
+        "11",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Split alpha"
+    }
+  },
+  "13": {
+    "class_type": "InvertMask",
+    "inputs": {
+      "mask": [
+        "12",
+        1
+      ]
+    },
+    "_meta": {
+      "title": "Alpha to mask"
+    }
+  },
+  "21": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "destination": [
+        "39",
+        0
+      ],
+      "source": [
+        "12",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "mask": [
+        "13",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Composite product (pre-harmonize)"
+    }
+  },
+  "28": {
+    "class_type": "MaskComposite",
+    "inputs": {
+      "destination": [
+        "32",
+        0
+      ],
+      "source": [
+        "29",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "operation": "add"
+    },
+    "_meta": {
+      "title": "Place cast shadow away from light"
+    }
+  },
+  "29": {
+    "class_type": "SolidMask",
+    "inputs": {
+      "value": 0.45,
+      "width": 300,
+      "height": 30
+    },
+    "_meta": {
+      "title": "Cast shadow strip"
+    }
+  },
+  "30": {
+    "class_type": "SolidMask",
+    "inputs": {
+      "value": 1.0,
+      "width": 360,
+      "height": 24
+    },
+    "_meta": {
+      "title": "Contact shadow strip"
+    }
+  },
+  "31": {
+    "class_type": "SolidMask",
+    "inputs": {
+      "value": 0.0,
+      "width": 768,
+      "height": 1344
+    },
+    "_meta": {
+      "title": "Shadow canvas"
+    }
+  },
+  "32": {
+    "class_type": "MaskComposite",
+    "inputs": {
+      "destination": [
+        "31",
+        0
+      ],
+      "source": [
+        "30",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "operation": "add"
+    },
+    "_meta": {
+      "title": "Place shadow under product base"
+    }
+  },
+  "33": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "28",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Shadow to image"
+    }
+  },
+  "34": {
+    "class_type": "ImageBlur",
+    "inputs": {
+      "image": [
+        "33",
+        0
+      ],
+      "blur_radius": 31,
+      "sigma": 9.0
+    },
+    "_meta": {
+      "title": "Soften shadow"
+    }
+  },
+  "35": {
+    "class_type": "ImageToMask",
+    "inputs": {
+      "image": [
+        "34",
+        0
+      ],
+      "channel": "red"
+    },
+    "_meta": {
+      "title": "Shadow mask"
+    }
+  },
+  "36": {
+    "class_type": "SolidMask",
+    "inputs": {
+      "value": 0.55,
+      "width": 768,
+      "height": 1344
+    },
+    "_meta": {
+      "title": "Shadow opacity"
+    }
+  },
+  "37": {
+    "class_type": "MaskComposite",
+    "inputs": {
+      "destination": [
+        "35",
+        0
+      ],
+      "source": [
+        "36",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "operation": "multiply"
+    },
+    "_meta": {
+      "title": "Apply shadow opacity"
+    }
+  },
+  "38": {
+    "class_type": "EmptyImage",
+    "inputs": {
+      "width": 768,
+      "height": 1344,
+      "batch_size": 1,
+      "color": 1709072
+    },
+    "_meta": {
+      "title": "Shadow color"
+    }
+  },
+  "39": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "destination": [
+        "1",
+        0
+      ],
+      "source": [
+        "38",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "mask": [
+        "37",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Darken contact shadow"
+    }
+  },
+  "469": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "66",
+        0
+      ],
+      "filename_prefix": "scene"
+    },
+    "_meta": {
+      "title": "Save scene"
+    }
+  },
+  "61": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "image": [
+        "79",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": 400,
+      "height": 800,
+      "crop": "disabled"
+    },
+    "_meta": {
+      "title": "Scale protect mask like the cutout"
+    }
+  },
+  "62": {
+    "class_type": "ImageToMask",
+    "inputs": {
+      "image": [
+        "61",
+        0
+      ],
+      "channel": "red"
+    },
+    "_meta": {
+      "title": "Protect mask"
+    }
+  },
+  "63": {
+    "class_type": "SolidMask",
+    "inputs": {
+      "value": 0.0,
+      "width": 768,
+      "height": 1344
+    },
+    "_meta": {
+      "title": "Protect canvas"
+    }
+  },
+  "64": {
+    "class_type": "MaskComposite",
+    "inputs": {
+      "destination": [
+        "63",
+        0
+      ],
+      "source": [
+        "62",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "operation": "add"
+    },
+    "_meta": {
+      "title": "Place protect mask"
+    }
+  },
+  "65": {
+    "class_type": "FeatherMask",
+    "inputs": {
+      "mask": [
+        "64",
+        0
+      ],
+      "left": 2,
+      "top": 2,
+      "right": 2,
+      "bottom": 2
+    },
+    "_meta": {
+      "title": "Feather protect edges"
+    }
+  },
+  "66": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "destination": [
+        "433:8",
+        0
+      ],
+      "source": [
+        "21",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "mask": [
+        "65",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Paste protected glyphs from pre-harmonize composite"
+    }
+  },
+  "67": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "64",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Placed protect mask to image"
+    }
+  },
+  "68": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "67",
+        0
+      ],
+      "filename_prefix": "protect_mask"
+    },
+    "_meta": {
+      "title": "Save placed protect mask"
+    }
+  },
+  "78": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "input.png"
+    },
+    "_meta": {
+      "title": "Input packshot"
+    }
+  },
+  "79": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "protect.png"
+    },
+    "_meta": {
+      "title": "Input protect mask (packshot px)"
+    }
+  },
+  "433:110": {
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "inputs": {
+      "prompt": "",
+      "clip": [
+        "433:38",
+        0
+      ],
+      "vae": [
+        "433:39",
+        0
+      ],
+      "image1": [
+        "21",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "TextEncodeQwenImageEditPlus"
+    }
+  },
+  "433:111": {
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "inputs": {
+      "prompt": "Replace the cat with a dalmatian, keeping the environment and scene consistent",
+      "clip": [
+        "433:38",
+        0
+      ],
+      "vae": [
+        "433:39",
+        0
+      ],
+      "image1": [
+        "21",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Harmonize prompt"
+    }
+  },
+  "433:3": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 362225868152841,
+      "steps": [
+        "433:441",
+        0
+      ],
+      "cfg": [
+        "433:442",
+        0
+      ],
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 0.35,
+      "model": [
+        "433:75",
+        0
+      ],
+      "positive": [
+        "433:111",
+        0
+      ],
+      "negative": [
+        "433:110",
+        0
+      ],
+      "latent_image": [
+        "433:88",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Sampler"
+    }
+  },
+  "433:37": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "qwen_image_edit_2509_fp8_e4m3fn.safetensors",
+      "weight_dtype": "default"
+    },
+    "_meta": {
+      "title": "UNETLoader"
+    }
+  },
+  "433:38": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    },
+    "_meta": {
+      "title": "CLIPLoader"
+    }
+  },
+  "433:39": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "_meta": {
+      "title": "VAELoader"
+    }
+  },
+  "433:436": {
+    "class_type": "PrimitiveInt",
+    "inputs": {
+      "value": 4
+    },
+    "_meta": {
+      "title": "PrimitiveInt"
+    }
+  },
+  "433:437": {
+    "class_type": "PrimitiveFloat",
+    "inputs": {
+      "value": 1
+    },
+    "_meta": {
+      "title": "PrimitiveFloat"
+    }
+  },
+  "433:438": {
+    "class_type": "PrimitiveInt",
+    "inputs": {
+      "value": 20
+    },
+    "_meta": {
+      "title": "PrimitiveInt"
+    }
+  },
+  "433:439": {
+    "class_type": "PrimitiveFloat",
+    "inputs": {
+      "value": 4
+    },
+    "_meta": {
+      "title": "PrimitiveFloat"
+    }
+  },
+  "433:440": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "433:443",
+        0
+      ],
+      "on_false": [
+        "433:37",
+        0
+      ],
+      "on_true": [
+        "433:89",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ComfySwitchNode"
+    }
+  },
+  "433:441": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "433:443",
+        0
+      ],
+      "on_false": [
+        "433:438",
+        0
+      ],
+      "on_true": [
+        "433:436",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ComfySwitchNode"
+    }
+  },
+  "433:442": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "433:443",
+        0
+      ],
+      "on_false": [
+        "433:439",
+        0
+      ],
+      "on_true": [
+        "433:437",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ComfySwitchNode"
+    }
+  },
+  "433:443": {
+    "class_type": "PrimitiveBoolean",
+    "inputs": {
+      "value": true
+    },
+    "_meta": {
+      "title": "PrimitiveBoolean"
+    }
+  },
+  "433:66": {
+    "class_type": "ModelSamplingAuraFlow",
+    "inputs": {
+      "shift": 3,
+      "model": [
+        "433:440",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ModelSamplingAuraFlow"
+    }
+  },
+  "433:75": {
+    "class_type": "CFGNorm",
+    "inputs": {
+      "strength": 1,
+      "pre_cfg": false,
+      "model": [
+        "433:66",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "CFGNorm"
+    }
+  },
+  "433:8": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "433:3",
+        0
+      ],
+      "vae": [
+        "433:39",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "VAEDecode"
+    }
+  },
+  "433:88": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "21",
+        0
+      ],
+      "vae": [
+        "433:39",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "VAEEncode"
+    }
+  },
+  "433:89": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "lora_name": "Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors",
+      "strength_model": 1,
+      "model": [
+        "433:37",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "LoraLoaderModelOnly"
+    }
+  }
+}

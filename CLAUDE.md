@@ -53,7 +53,7 @@ Model allowlist:
 - Brand-from-URL step: vendor the Design Extractor from `~/AI/design-creator` (ESM Node, Playwright, `extractDesign(url)` in `src/extractor.js`, `formatDesignMd()` in `src/formatter.js`, extractors for colors, typography, tokens, assets incl. logos and hero images). Copy `src/` into `packages/design-extract/`. Playwright Chromium does not run on Vercel serverless as-is: ship a cached Tauvel DESIGN.md plus a paste/upload fallback first, serverless crawl only if time remains.
 - AI-disclosure badge and claims guard on exports: see `docs/brand-safety-ontology.md` (already adapted for this app, includes the Tauvel demo moment). No vault access needed.
 - Async run pattern: Stykii's resumable Node.js batch runner (per-item status). Same shape as workflow submit / jobs.get / refresh.
-- Demo brand and product: Tauvel (James's own brand). No other brands, no stock product shots, no people.
+- Demo brand and product: Tauvel (James's own brand). No other brands, no stock product shots, no identifiable people or likenesses; distant silhouettes for scale are fine.
 
 ## Working rules
 

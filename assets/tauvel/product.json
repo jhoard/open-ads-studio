@@ -22,5 +22,7 @@
       "height": 812
     },
     "note": "reveal-start.png carries reveal-end.png's sleeve pixels inside sleeveRect (bit-exact copy; untouched original is closed-matched-v1-green.png). The video pastes reveal-end's sleeve region onto every frame, below the foil line (y 378 in source px)."
-  }
+  },
+  "protectMask": "packshot-v1-protect.png",
+  "protectNote": "Protect region (M3.5): gold glyph pixels of the primary packshot (monogram, wordmark, label copy), dilated 4 px. White = never repainted; pasted back from the source after any harmonize or video pass."
 }
