@@ -1,4 +1,5 @@
 import sharp, { type Sharp } from "sharp";
+import { labelMatch, lumaPlane } from "./label-match";
 
 // Find where the packshot landed in an edited image, then paste only its protected glyphs back.
 // The edit model may reframe the shot: detect the box, then refine scale and offset by
@@ -193,6 +194,10 @@ const REFLECTION_SOFTEN_SIGMA = 7;
 const STRIP_FEATHER = 24; // px of horizontal blend into the untouched surface
 const STRIP_HOLD_SHARE = 0.6; // full softening for this share of the strip depth, then blend out
 
+// libvips morphology treats white as background here: erode grows a white-on-black mask (measured:
+// 31,107 px to 60,256 at radius 6, while dilate shrinks it to 4,217).
+const growMask = (input: Sharp, radius: number): Sharp => input.erode(radius);
+
 const luma = (rgb: Buffer, i: number): number => 0.2126 * rgb[i * 3] + 0.7152 * rgb[i * 3 + 1] + 0.0722 * rgb[i * 3 + 2];
 
 /** Resize a source image by the alignment and drop it onto a canvas-sized raw buffer. */
@@ -213,28 +218,63 @@ async function placeOnCanvas(input: Sharp, align: Alignment, size: Canvas, canva
   return out;
 }
 
-const blurGray = (data: Buffer, canvas: Canvas, sigma: number): Promise<Buffer> =>
-  sharp(data, { raw: { ...canvas, channels: 1 } }).blur(sigma).raw().toBuffer();
+/** Separable box blur in float, run three times to approximate a Gaussian of the given sigma. */
+function smoothFloat(data: Float32Array, canvas: Canvas, sigma: number): Float32Array {
+  const radius = Math.max(1, Math.round(sigma * 0.87)); // three box passes of this radius ~ Gaussian sigma
+  let current = data;
+  const pass = (input: Float32Array, horizontal: boolean): Float32Array => {
+    const out = new Float32Array(input.length);
+    const lines = horizontal ? canvas.height : canvas.width;
+    const length = horizontal ? canvas.width : canvas.height;
+    const at = (line: number, k: number): number => (horizontal ? line * canvas.width + k : k * canvas.width + line);
+    for (let line = 0; line < lines; line++) {
+      let sum = 0;
+      for (let k = -radius; k <= radius; k++) sum += input[at(line, Math.min(length - 1, Math.max(0, k)))];
+      for (let k = 0; k < length; k++) {
+        out[at(line, k)] = sum / (2 * radius + 1);
+        sum += input[at(line, Math.min(length - 1, k + radius + 1))] - input[at(line, Math.max(0, k - radius))];
+      }
+    }
+    return out;
+  };
+  for (let i = 0; i < 3; i++) current = pass(pass(current, true), false);
+  return current;
+}
 
 /** Per-pixel brightness ratio of the edit's box face to the packshot's, from glyph-free face pixels only. */
-async function toneRatio(edited: Buffer, packshot: Buffer, face: Buffer, canvas: Canvas): Promise<Float32Array> {
+function toneRatio(edited: Buffer, packshot: Buffer, face: Buffer, canvas: Canvas): Float32Array {
   const n = canvas.width * canvas.height;
-  const editedFace = Buffer.alloc(n);
-  const packshotFace = Buffer.alloc(n);
+  const editedFace = new Float32Array(n);
+  const packshotFace = new Float32Array(n);
+  let editedSum = 0, packshotSum = 0;
   for (let i = 0; i < n; i++) {
     if (!face[i]) continue;
-    editedFace[i] = Math.round(luma(edited, i));
-    packshotFace[i] = Math.max(1, Math.round(luma(packshot, i)));
+    editedFace[i] = luma(edited, i);
+    packshotFace[i] = luma(packshot, i);
+    editedSum += editedFace[i];
+    packshotSum += packshotFace[i];
   }
-  // Same weights on both sides, so the ratio of the blurs is a normalized local ratio.
-  const [e, p] = await Promise.all([blurGray(editedFace, canvas, TONE_SIGMA), blurGray(packshotFace, canvas, TONE_SIGMA)]);
+  // Normalized convolution: same weights on both sides, so the ratio of the blurs is a local ratio.
+  const e = smoothFloat(editedFace, canvas, TONE_SIGMA);
+  const p = smoothFloat(packshotFace, canvas, TONE_SIGMA);
+  const fallback = packshotSum > 0 ? editedSum / packshotSum : 1;
   const ratio = new Float32Array(n);
-  for (let i = 0; i < n; i++) ratio[i] = p[i] > 0 ? Math.min(TONE_RANGE.max, Math.max(TONE_RANGE.min, e[i] / p[i])) : 1;
+  for (let i = 0; i < n; i++) {
+    const local = p[i] > 1e-3 ? e[i] / p[i] : fallback;
+    ratio[i] = Math.min(TONE_RANGE.max, Math.max(TONE_RANGE.min, local));
+  }
   return ratio;
 }
 
+export interface PasteResult {
+  /** Label match of the final image against the aligned source label (0 to 1). */
+  labelMatch: number;
+  /** Label match of the model's own output before the paste, for comparison. */
+  modelLabelMatch: number;
+}
+
 /** Composite the aligned, tone-matched glyphs onto the edit, plus their fading reflection under the base. */
-export async function pasteGlyphs(packshotPath: string, editedPath: string, maskPath: string, align: Alignment, outputPath: string): Promise<void> {
+export async function pasteGlyphs(packshotPath: string, editedPath: string, maskPath: string, align: Alignment, outputPath: string): Promise<PasteResult> {
   const meta = await sharp(packshotPath).metadata();
   const size = { width: meta.width as number, height: meta.height as number };
   const { data: edited, info } = await sharp(editedPath).removeAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -248,15 +288,16 @@ export async function pasteGlyphs(packshotPath: string, editedPath: string, mask
     y0: Math.max(0, Math.round(align.dy + sourceBox.y * align.scaleY)),
     base: Math.min(canvas.height - 1, Math.round(align.dy + (sourceBox.y + sourceBox.height) * align.scaleY)),
   };
-  const [glyphs, alpha, guard] = await Promise.all([
+  const [glyphs, alpha, guard, core] = await Promise.all([
     placeOnCanvas(sharp(packshotPath).removeAlpha().toColourspace("srgb"), align, size, canvas, 3),
-    placeOnCanvas(sharp(maskPath).greyscale().dilate(PASTE_BAND).blur(PASTE_FEATHER), align, size, canvas, 1),
-    placeOnCanvas(sharp(maskPath).greyscale().dilate(FACE_GLYPH_GUARD), align, size, canvas, 1),
+    placeOnCanvas(growMask(sharp(maskPath).greyscale(), PASTE_BAND).blur(PASTE_FEATHER), align, size, canvas, 1),
+    placeOnCanvas(growMask(sharp(maskPath).greyscale(), FACE_GLYPH_GUARD), align, size, canvas, 1),
+    placeOnCanvas(sharp(maskPath).greyscale(), align, size, canvas, 1),
   ]);
 
   const face = Buffer.alloc(n);
   for (let y = box.y0; y < box.base; y++) for (let x = box.x0; x <= box.x1; x++) face[y * canvas.width + x] = guard[y * canvas.width + x] < 16 ? 1 : 0;
-  const ratio = await toneRatio(edited, glyphs, face, canvas);
+  const ratio = toneRatio(edited, glyphs, face, canvas);
 
   // Soften the reflection strip first so the model's own mirrored text disappears.
   const depth = Math.round((box.base - box.y0) * REFLECTION_DEPTH_SHARE);
@@ -299,4 +340,10 @@ export async function pasteGlyphs(packshotPath: string, editedPath: string, mask
     }
   }
   await sharp(out, { raw: { ...canvas, channels: 3 } }).png().toFile(outputPath);
+
+  const source = lumaPlane(glyphs, canvas.width, canvas.height);
+  return {
+    labelMatch: labelMatch(source, lumaPlane(out, canvas.width, canvas.height), core),
+    modelLabelMatch: labelMatch(source, lumaPlane(edited, canvas.width, canvas.height), core),
+  };
 }
