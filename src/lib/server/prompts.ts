@@ -41,3 +41,9 @@ export const REVEAL_PROMPT =
   "The chocolate bar slowly rises out of the green sleeve, the gold foil unfolds and crinkles open, revealing glossy squares with an embossed T monogram. " +
   "Bright, even, white studio light throughout. Locked-off camera, nothing else in the scene moves.";
 export const REVEAL_SOUND = " Sound: soft foil crinkle, quiet studio room tone.";
+
+/** Cinemagraph: the finished Scene still is both keyframes; only the ambient elements move. */
+export const CINEMAGRAPH_PROMPT =
+  "The chocolate box stays perfectly still. Steam slowly curls up from the espresso cup, the light beam drifts gently across the dark wall, " +
+  "faint dust motes turn in the beam. Locked-off camera. Sound: quiet room tone, a faint cup clink.";
+export const CINEMAGRAPH_SECONDS = 5;

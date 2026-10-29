@@ -39,11 +39,14 @@ export interface ProvenanceInput {
   labelMatch: number | null;
   safety: BrandSafety;
   sizes: string[];
+  fromScene: boolean;
 }
 
 export async function buildProvenance(input: ProvenanceInput): Promise<Record<string, unknown>> {
   const sha = await gitSha();
-  const stage = STAGE_MODELS[input.stage] ?? { models: [], workflows: [] };
+  const own = STAGE_MODELS[input.stage] ?? { models: [], workflows: [] };
+  const scene = input.fromScene ? (STAGE_MODELS["scene-relight"] ?? { models: [], workflows: [] }) : { models: [], workflows: [] };
+  const stage = { models: [...scene.models, ...own.models], workflows: [...scene.workflows, ...own.workflows] };
   return {
     ai_generated: true,
     generator: "open-ads-studio",

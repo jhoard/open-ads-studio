@@ -1,10 +1,14 @@
 import { Comfy, ComfyError, Forbidden, InsufficientCredits, MissingCredentials, QueueFull, Unauthorized } from "@comfyorg/sdk";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
 import { TERMINAL_STATUSES, type JobStatus, type JobView, type OutputKind, type StageJob, type StageName, type StageParams } from "@/lib/types";
 import { WAIT_TIMEOUT_SECONDS, dataPath } from "./config";
+import { alignToClip, pasteClip } from "./clip-paste";
+import { HERO_SIZE } from "./geometry";
 import { alignPackshot, pasteGlyphs } from "./glyph-paste";
+import { DEFAULT_POST_VFX, postVfx } from "./post-vfx";
 import { buildWorkflow, stageOutputs } from "./workflows";
 
 const MAX_ERROR_MESSAGE_LENGTH = 500;
@@ -56,9 +60,10 @@ interface CreateJobInput {
   idempotencyKey: string;
   params: StageParams;
   glyphPaste?: StageJob["glyphPaste"];
+  clipPaste?: StageJob["clipPaste"];
 }
 
-export async function createJob({ id, stage, runId, label, idempotencyKey, params, glyphPaste }: CreateJobInput): Promise<StageJob> {
+export async function createJob({ id, stage, runId, label, idempotencyKey, params, glyphPaste, clipPaste }: CreateJobInput): Promise<StageJob> {
   const client = new Comfy();
   const workflow = await buildWorkflow(client, stage, params);
   const submitted = await client.submit(workflow);
@@ -83,6 +88,7 @@ export async function createJob({ id, stage, runId, label, idempotencyKey, param
     startedAt: null,
     completedAt: null,
     ...(glyphPaste ? { glyphPaste } : {}),
+    ...(clipPaste ? { clipPaste } : {}),
   };
   await writeJson(jobFile(id), record);
   await writeJson(keyFile(idempotencyKey), { id });
@@ -109,6 +115,27 @@ async function finishGlyphPaste(record: StageJob, rawFile: string): Promise<Part
   } catch (error: unknown) {
     console.error("glyph paste failed", record.id, error);
     return { status: "failed", errorType: "glyph_paste_failed", errorMessage: "The scene rendered, but the label could not be located and restored.", extraFiles: { raw: rawFile } };
+  }
+}
+
+/** Cinemagraph post-step: glyph paste on every frame, each tone-matched, then the first and last frame holds. */
+async function finishClipPaste(record: StageJob, rawFile: string): Promise<Partial<StageJob>> {
+  const { stillPath, packshotPath, protectMaskPath } = record.clipPaste as NonNullable<StageJob["clipPaste"]>;
+  const finalFile = `${record.id}.final.mp4`;
+  const workDir = dataPath("work", record.id);
+  try {
+    const still = await sharp(stillPath).metadata();
+    const align = alignToClip(await alignPackshot(packshotPath, stillPath, protectMaskPath), { width: still.width as number, height: still.height as number }, HERO_SIZE[record.aspect]);
+    const pasted = path.join(workDir, "pasted.mp4");
+    const scores = await pasteClip(outputPath(rawFile), pasted, packshotPath, protectMaskPath, align, path.join(workDir, "frames"));
+    await postVfx(pasted, outputPath(finalFile), DEFAULT_POST_VFX);
+    // The weakest frame is the honest score for a clip.
+    return { outputFile: finalFile, extraFiles: { raw: rawFile }, labelMatch: { final: Math.min(...scores), model: null } };
+  } catch (error: unknown) {
+    console.error("clip paste failed", record.id, error);
+    return { status: "failed", errorType: "clip_paste_failed", errorMessage: "The clip rendered, but the label could not be restored on every frame.", extraFiles: { raw: rawFile } };
+  } finally {
+    await rm(workDir, { recursive: true, force: true });
   }
 }
 
@@ -159,6 +186,7 @@ async function syncOnce(record: StageJob): Promise<StageJob> {
       }
       next = { ...next, outputFile: file, outputKind: kind, extraFiles };
       if (record.glyphPaste) next = { ...next, ...(await finishGlyphPaste(record, file)) };
+      if (record.clipPaste) next = { ...next, ...(await finishClipPaste(record, file)) };
     } else {
       next = { ...next, status: "failed", errorType: `no_${kind}_output`, errorMessage: `The workflow finished without an ${kind} output at node ${outputNode}.` };
     }

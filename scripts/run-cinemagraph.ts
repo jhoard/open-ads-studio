@@ -11,14 +11,11 @@ import { HERO_SIZE } from "../src/lib/server/geometry";
 import { alignPackshot } from "../src/lib/server/glyph-paste";
 import { outputPath } from "../src/lib/server/jobs";
 import { DEFAULT_POST_VFX, postVfx } from "../src/lib/server/post-vfx";
+import { CINEMAGRAPH_PROMPT, CINEMAGRAPH_SECONDS } from "../src/lib/server/prompts";
 import { runPass } from "../src/lib/server/recipe-run";
 
 const DEFAULT_SEED = 42;
 const ASPECT = "3:4";
-const DURATION_SECONDS = 5;
-const PROMPT =
-  "The chocolate box stays perfectly still. Steam slowly curls up from the espresso cup, the light beam drifts gently across the dark wall, " +
-  "faint dust motes turn in the beam. Locked-off camera. Sound: quiet room tone, a faint cup clink.";
 
 async function main(): Promise<void> {
   const [still, seedArg] = process.argv.slice(2);
@@ -30,7 +27,7 @@ async function main(): Promise<void> {
   const started = Date.now();
 
   // H3 runs while the overlay is built. Its own rect paste stays off; the glyph overlay replaces it.
-  const clipJob = runPass(randomUUID(), "hero-h3", "cinemagraph", { imagePath: still, endImagePath: still, aspect: ASPECT, prompt: PROMPT, seed, durationSeconds: DURATION_SECONDS });
+  const clipJob = runPass(randomUUID(), "hero-h3", "cinemagraph", { imagePath: still, endImagePath: still, aspect: ASPECT, prompt: CINEMAGRAPH_PROMPT, seed, durationSeconds: CINEMAGRAPH_SECONDS });
 
   const packshot = productPhotoPath(product);
   const mask = protectMaskPath(product);

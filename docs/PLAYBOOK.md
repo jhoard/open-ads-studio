@@ -34,7 +34,7 @@ Mirrors Higgsfield Ads Studio: Brand, Product, Create, Review, Export.
 | Scene (hero still) | The packshot itself goes in; Qwen rebuilds set and light around it (dark slate, hard beam, espresso cup, reflection). The box is detected, then only the protected glyphs are pasted back, tone-matched to the scene, plus a fading flipped copy in the reflection | Qwen-Image-Edit 2509 | workflows/scene-edit.json + src/lib/server/glyph-paste.ts |
 | Reveal: Draft | Keyframed product moment, start frame to end frame, fast preview, no audio | LTX-2 19B distilled | workflows/vfx-ltx-reveal.json |
 | Reveal: Final | Same keyframes and protected paste, with native audio | MiniMax H3 (first+last frame) | workflows/hero-h3.json |
-| Cinemagraph | A finished Scene still as both H3 keyframes: steam, drifting beam, motes, room tone. Glyph paste on every frame, tone-matched per frame | MiniMax H3 (first+last frame) | workflows/hero-h3.json + scripts/run-cinemagraph.ts (not in the UI yet) |
+| Cinemagraph | A finished Scene still as both H3 keyframes: steam, drifting beam, motes, room tone. Glyph paste on every frame, tone-matched per frame | MiniMax H3 (first+last frame) | workflows/hero-h3.json + per-frame glyph paste (src/lib/server/clip-paste.ts) |
 | Hero clip | Motion with native audio | MiniMax H3 (first+last frame) | workflows/hero-h3.json |
 | Retired | Cut-and-drop compositing (catalog set, Topography, Molten): the pack read as a sticker and could not integrate with liquid | Qwen-Image-Edit 2509 | scene.json, scene-set.json, scene-composite.json (kept in repo) |
 
@@ -176,7 +176,7 @@ Never cut: Protect + label match, claims guard + disclosure badge, workflow JSON
 - H3 transients at 1.8s/2.9s: pending
 - Live link: done. Demo mode is the default on Vercel (GENERATION_MODE unset): Create returns the bundled example renders and never calls Comfy. A rate limit is still needed before setting GENERATION_MODE=live there.
 - Page copy promising native audio from LTX: gone with the M0 page.
-- Cinemagraph in the UI: add as a recipe that chains off an approved Scene.
+- Cinemagraph in the UI: done. A card on Create, live path verified (worst-frame label match 99.1%); it animates the newest finished Scene and is disabled with "Needs: a finished Scene" until one exists.
 - Clip exports need ffmpeg, which Vercel functions lack: on the live link, clip packs return 501 (stills export fine). Fix by prerendering the example clip packs or bundling an ffmpeg binary.
 - Reveal exports: the 4:5 crop clips the top of the bar slightly; anchor the crop lower for reveals.
 - Live link storage (found from code, not yet tested live): job records, uploads and outputs go to `var/` on local disk, which is read-only on Vercel outside /tmp and not shared between function instances, so live submits from the deployed app would fail. Demo mode sidesteps it; move to Vercel Blob (planned in M5) before turning live mode on there.

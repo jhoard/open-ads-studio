@@ -126,8 +126,10 @@ export interface StageJob {
   extraFiles?: Record<string, string>;
   /** Post-step inputs for scene-relight: the source packshot and its protect mask (server paths). */
   glyphPaste?: { packshotPath: string; protectMaskPath: string };
+  /** Post-step inputs for a cinemagraph: the Scene still it animates, and the packshot and mask behind its label. */
+  clipPaste?: { stillPath: string; packshotPath: string; protectMaskPath: string };
   /** Label match after the glyph paste, and of the model's own output, 0 to 1. */
-  labelMatch?: { final: number; model: number };
+  labelMatch?: { final: number; model: number | null };
   createdAt: string;
   updatedAt: string;
   startedAt: string | null;

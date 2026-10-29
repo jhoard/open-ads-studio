@@ -36,6 +36,8 @@ interface Source {
   generatedAt: string | null;
   labelMatch: number | null;
   example: boolean;
+  /** A cinemagraph animates a Scene still, so its chain includes the still's models. */
+  fromScene: boolean;
 }
 
 const fail = (status: number, error: string): NextResponse<ApiError> => NextResponse.json({ error }, { status });
@@ -45,9 +47,8 @@ async function resolveSource(body: ExportBody): Promise<Source | string> {
   if (body.demo === true) {
     const recipe = typeof body.recipe === "string" ? findRecipe(body.recipe) : undefined;
     if (!recipe) return "Unknown recipe.";
-    const stage: StageName = recipe.id === "scene" ? "scene-relight" : recipe.id === "reveal-final" ? "hero-h3" : "vfx-reveal";
     const file = path.join(process.cwd(), "public", recipe.example.url.replace(/^\//, ""));
-    return { file, kind: recipe.example.kind, stage, label: recipe.label, seed: null, generatedAt: null, labelMatch: recipe.example.labelMatch ?? null, example: true };
+    return { file, kind: recipe.example.kind, stage: recipe.stage, label: recipe.label, seed: null, generatedAt: null, labelMatch: recipe.example.labelMatch ?? null, example: true, fromScene: recipe.id === "cinemagraph" };
   }
   if (typeof body.creativeId !== "string" || !UUID_PATTERN.test(body.creativeId)) return "Missing creative.";
   const job = await findJob(body.creativeId);
@@ -61,6 +62,7 @@ async function resolveSource(body: ExportBody): Promise<Source | string> {
     generatedAt: job.completedAt,
     labelMatch: job.labelMatch?.final ?? null,
     example: false,
+    fromScene: Boolean(job.clipPaste),
   };
 }
 
@@ -89,7 +91,7 @@ export async function POST(request: Request): Promise<Response> {
   const workDir = path.join(os.tmpdir(), `oas-export-${randomUUID()}`);
   await mkdir(workDir, { recursive: true });
   try {
-    const models = STAGE_MODELS[source.stage]?.models ?? [];
+    const models = [...(source.fromScene ? (STAGE_MODELS["scene-relight"]?.models ?? []) : []), ...(STAGE_MODELS[source.stage]?.models ?? [])];
     const disclosure = { models, basis: safety.disclosureBasis, provenanceRef: "provenance.json" };
     const files: Record<string, Uint8Array> = {};
     const base = slug(`tauvel ${source.label}`);

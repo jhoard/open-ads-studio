@@ -2,43 +2,53 @@
 
 import { useState } from "react";
 import type { CreateRequest } from "@/lib/client/useCreatives";
-import type { RecipeId, RecipeInfo } from "@/lib/recipes";
+import { NEED_REASON, RECIPE_CARDS, findRecipe, type RecipeId, type RecipeInfo, type RecipeNeed } from "@/lib/recipes";
 import { OBJECTIVES, type Objective } from "@/lib/studio";
 import type { SceneDirection } from "@/lib/types";
-
+import { RecipeCard } from "./RecipeCard";
 
 interface CreateStepProps {
-  recipes: readonly RecipeInfo[];
   directions: SceneDirection[];
-  hasReveal: boolean;
+  /** Which needs are met; demo mode meets all of them with the bundled examples. */
+  available: Record<RecipeNeed, boolean>;
+  /** The finished Scene a cinemagraph animates, when there is one. */
+  sceneSourceId: string | null;
   mode: "live" | "demo";
   submitting: boolean;
   error: string | null;
   onCreate: (requests: CreateRequest[], objective: Objective) => void;
 }
 
-function RecipeMedia({ recipe }: { recipe: RecipeInfo }) {
-  return recipe.example.kind === "image" ? (
-    <img src={recipe.example.url} alt={`${recipe.label} example`} loading="lazy" />
-  ) : (
-    <video src={recipe.example.url} muted loop playsInline autoPlay preload="metadata" aria-label={`${recipe.label} example`} />
-  );
-}
+const recipeOf = (id: RecipeId): RecipeInfo => findRecipe(id) as RecipeInfo;
 
-export function CreateStep({ recipes, directions, hasReveal, mode, submitting, error, onCreate }: CreateStepProps) {
-  const [selected, setSelected] = useState<Set<RecipeId>>(new Set(["scene"]));
+export function CreateStep({ directions, available, sceneSourceId, mode, submitting, error, onCreate }: CreateStepProps) {
+  const [selected, setSelected] = useState<Set<string>>(new Set(["scene"]));
+  const [variants, setVariants] = useState<Record<string, RecipeId>>(() => Object.fromEntries(RECIPE_CARDS.map((card) => [card.id, card.variants[0].recipe])));
   const [directionId, setDirectionId] = useState(directions[0]?.id);
   const [objective, setObjective] = useState<Objective>("awareness");
 
-  const toggle = (id: RecipeId): void =>
+  const reasonFor = (recipe: RecipeInfo): string | null => (recipe.needs && !available[recipe.needs] ? NEED_REASON[recipe.needs] : null);
+
+  const toggle = (cardId: string): void =>
     setSelected((current) => {
       const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(cardId)) next.delete(cardId);
+      else next.add(cardId);
       return next;
     });
 
-  const create = (): void => onCreate([...selected].map((recipe) => ({ recipe, ...(recipe === "scene" ? { directionId } : {}) })), objective);
+  const picked = RECIPE_CARDS.filter((card) => selected.has(card.id) && reasonFor(recipeOf(variants[card.id])) === null);
+
+  const create = (): void =>
+    onCreate(
+      picked.map((card) => {
+        const recipe = variants[card.id];
+        if (recipe === "scene") return { recipe, directionId };
+        if (recipe === "cinemagraph" && sceneSourceId) return { recipe, sourceCreativeId: sceneSourceId };
+        return { recipe };
+      }),
+      objective,
+    );
 
   return (
     <section className="panel" aria-labelledby="create-heading">
@@ -69,28 +79,19 @@ export function CreateStep({ recipes, directions, hasReveal, mode, submitting, e
         </div>
       </div>
 
-      <div className="recipe-grid">
-        {recipes.map((recipe) => {
-          const disabled = recipe.needsReveal && !hasReveal;
-          const isSelected = selected.has(recipe.id);
+      <div className="recipe-grid" role="group" aria-label="Shot recipes">
+        {RECIPE_CARDS.map((card) => {
+          const recipe = recipeOf(variants[card.id]);
           return (
-            <label key={recipe.id} className="recipe-card" data-selected={isSelected} data-disabled={disabled}>
-              <input type="checkbox" checked={isSelected} disabled={disabled} onChange={() => toggle(recipe.id)} />
-              <div className="recipe-media">
-                <RecipeMedia recipe={recipe} />
-              </div>
-              <div className="recipe-body">
-                <h3>{recipe.label}</h3>
-                <p>{recipe.summary}</p>
-                <div className="tags">
-                  {[...recipe.models, ...recipe.workflows].map((tag) => (
-                    <span className="tag" key={tag}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </label>
+            <RecipeCard
+              key={card.id}
+              card={card}
+              recipe={recipe}
+              selected={selected.has(card.id)}
+              disabledReason={reasonFor(recipe)}
+              onToggle={() => toggle(card.id)}
+              onVariant={(next) => setVariants((current) => ({ ...current, [card.id]: next }))}
+            />
           );
         })}
       </div>
@@ -101,9 +102,9 @@ export function CreateStep({ recipes, directions, hasReveal, mode, submitting, e
         </p>
       )}
       <div className="step-actions">
-        <span className="hint">{mode === "demo" ? "Demo mode: shows the bundled example renders, no generation." : "Scene takes about a minute. Reveals take two to four."}</span>
-        <button className="button" type="button" disabled={submitting || selected.size === 0} onClick={create}>
-          {submitting ? "Submitting" : `Create ${selected.size} ${selected.size === 1 ? "creative" : "creatives"}`}
+        <span className="hint">{mode === "demo" ? "Demo mode: shows the bundled example renders, no generation." : "Scene takes about a minute. Reveals and cinemagraphs take two to four."}</span>
+        <button className="button" type="button" disabled={submitting || picked.length === 0} onClick={create}>
+          {submitting ? "Submitting" : `Create ${picked.length} ${picked.length === 1 ? "creative" : "creatives"}`}
         </button>
       </div>
     </section>

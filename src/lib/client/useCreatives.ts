@@ -11,6 +11,7 @@ const STORAGE_KEY = "open-ads-studio.creatives";
 export interface CreateRequest {
   recipe: RecipeId;
   directionId?: string;
+  sourceCreativeId?: string;
 }
 
 export interface UseCreatives {

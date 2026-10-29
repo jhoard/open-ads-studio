@@ -18,6 +18,7 @@ interface RunBody {
   recipe?: unknown;
   directionId?: unknown;
   seed?: unknown;
+  sourceCreativeId?: unknown;
   idempotencyKey?: unknown;
 }
 
@@ -30,7 +31,7 @@ function demoCreative(recipe: RecipeId, idempotencyKey: string): Creative {
     id: `demo-${recipe}-${idempotencyKey.slice(0, 8)}`,
     recipe,
     demo: true,
-    stage: recipe === "scene" ? "scene-relight" : recipe === "reveal-final" ? "hero-h3" : "vfx-reveal",
+    stage: info.stage,
     runId: idempotencyKey,
     label: info.label,
     aspect: "3:4",
@@ -63,6 +64,7 @@ export async function POST(request: Request): Promise<NextResponse<Creative | Ap
   if (!recipe) return fail(400, "Unknown recipe.");
   if (typeof body.idempotencyKey !== "string" || !UUID_PATTERN.test(body.idempotencyKey)) return fail(400, "Missing or invalid idempotency key.");
   if (body.directionId !== undefined && typeof body.directionId !== "string") return fail(400, "Invalid scene direction.");
+  if (body.sourceCreativeId !== undefined && !(typeof body.sourceCreativeId === "string" && UUID_PATTERN.test(body.sourceCreativeId))) return fail(400, "Invalid source creative.");
   if (body.seed !== undefined && !(Number.isInteger(body.seed) && (body.seed as number) >= 0 && (body.seed as number) <= MAX_SEED)) return fail(400, "Seed must be a non-negative integer.");
 
   if (GENERATION_MODE === "demo") return NextResponse.json(demoCreative(recipe.id, body.idempotencyKey));
@@ -75,6 +77,7 @@ export async function POST(request: Request): Promise<NextResponse<Creative | Ap
       recipe: recipe.id,
       directionId: body.directionId as string | undefined,
       seed: body.seed as number | undefined,
+      sourceCreativeId: body.sourceCreativeId as string | undefined,
       idempotencyKey: body.idempotencyKey,
     });
     return NextResponse.json({ ...toView(job), recipe: recipe.id, demo: false }, { status: 201 });

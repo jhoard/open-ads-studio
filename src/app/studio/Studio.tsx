@@ -51,6 +51,8 @@ export function Studio() {
 
   const unlocked = [true, brandLoaded, brandLoaded && protectConfirmed, hasCreatives, studio.approved.size > 0];
   const canAdvance = step < STEPS.length - 1 && unlocked[step + 1];
+  // The newest finished live Scene is what a cinemagraph animates.
+  const sceneSourceId = studio.creatives.find((creative) => !creative.demo && creative.stage === "scene-relight" && creative.status === "succeeded")?.id ?? null;
   const approvedCreatives = studio.creatives.filter((creative) => studio.approved.has(creative.id) && creative.outputUrl);
 
   const create = async (requests: CreateRequest[], objective: Objective): Promise<void> => {
@@ -98,9 +100,9 @@ export function Studio() {
           {step === 1 && <ProductStep product={data.product} protectConfirmed={protectConfirmed} onConfirm={setProtectConfirmed} />}
           {step === CREATE_STEP && (
             <CreateStep
-              recipes={data.recipes}
               directions={brand.sceneDirections}
-              hasReveal={data.product.reveal !== null}
+              available={{ "reveal-keyframes": data.mode === "demo" || data.product.reveal !== null, "scene-still": data.mode === "demo" || sceneSourceId !== null }}
+              sceneSourceId={sceneSourceId}
               mode={data.mode}
               submitting={studio.submitting}
               error={studio.error}
