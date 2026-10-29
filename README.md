@@ -10,6 +10,21 @@ Product photo + brand kit in. Label-exact ad stills and short video with audio o
 
 > Status: in active development during the event. See [`docs/PLAYBOOK.md`](docs/PLAYBOOK.md) for the plan, milestones and decisions.
 
+## How the label stays exact
+
+![Model alone vs restored: Qwen-Image-Edit relights the pack but repaints the small print; Open Ads Studio pastes the original glyphs back](docs/img/label-before-after.png)
+
+1. **Protect mask.** The packshot ships with a mask of its gold glyphs (`assets/tauvel/packshot-v1-protect.png`): wordmark, monogram and small print. Those pixels are never taken from a model.
+2. **The model owns the scene.** Qwen-Image-Edit 2509 gets the real packshot as its input image and relights it in place on the art-directed set (`workflows/scene-edit.json`). Light, shadow, surface and reflection are the model's; the label is not.
+3. **Find the box.** The model reframes freely, so the app locates the pack in its output: green-pixel bounds for a first guess, then normalized cross-correlation on gradients to refine a separate X and Y scale plus shift.
+4. **Paste tone-matched glyphs, reflection included.** The original glyphs are warped into place and scaled by the scene's local luminance (a float box blur of the model's own render), so the gold catches the new light. A vertically flipped copy goes into the reflection at 25% opacity, fading with depth.
+5. **Per frame for video.** Cinemagraph clips run the same paste on every frame, with tone matching recomputed per frame, so moving light still lands on exact glyphs.
+6. **Label-match score.** Each creative reports the SSIM structure term over the glyph mask, against the packshot, for the model alone and after the paste. On the example above: 49.0% before, 99.8% after. Review shows both numbers; video reports its worst frame.
+
+The box detection and paste live in [`src/lib/server/glyph-paste.ts`](src/lib/server/glyph-paste.ts), the per-frame pass in [`clip-paste.ts`](src/lib/server/clip-paste.ts), the score in [`label-match.ts`](src/lib/server/label-match.ts). The figure is rebuilt with `npx tsx scripts/build-label-figure.ts`.
+
+![Scene recipe: scene-edit.json on Comfy Cloud, then the label paste in app code](docs/img/scene-workflow.png)
+
 ## How it works
 
 | Recipe | Output | Models | Workflows |
