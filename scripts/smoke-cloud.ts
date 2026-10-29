@@ -47,7 +47,7 @@ async function main(): Promise<void> {
 
 main().catch((error: unknown) => {
   if (error instanceof ComfyError) {
-    console.error(`${error.name} code=${String(error.code)} status=${String(error.status)}: ${error.message}`);
+    console.error(`${error.name} code=${String(error.code)} status=${String(error.httpStatus)}: ${error.message}`);
   } else {
     console.error(error);
   }

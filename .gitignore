@@ -12,3 +12,5 @@ models/
 *.log
 .DS_Store
 *.tsbuildinfo
+.playwright-mcp/
+next-env.d.ts
