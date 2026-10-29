@@ -31,12 +31,11 @@ Mirrors Higgsfield Ads Studio: Brand, Product, Create, Review, Export.
 
 | Recipe | What it makes | Model | Workflow |
 |---|---|---|---|
-| Hero still: Topography | Art-directed set (chocolate canyon), product seated on the detected surface at matched camera, cast shadow from the detected light, harmonized with the label protected | Qwen-Image-Edit 2509 | workflows/scene-set.json + scene-composite.json |
-| VFX clip: Molten | Calm set and a Qwen edit of it (frozen chocolate wave) as start/end keyframes, product composited identically in both, keyframed motion, protected-glyph paste | Qwen-Image-Edit 2509 + LTX-2 19B distilled | scene-set + scene-edit + scene-composite + vfx-ltx-reveal.json |
+| Scene (hero still) | The packshot itself goes in; Qwen rebuilds set and light around it (dark slate, hard beam, espresso cup, reflection). The box is detected, then only the protected glyphs are pasted back, tone-matched to the scene, plus a fading flipped copy in the reflection | Qwen-Image-Edit 2509 | workflows/scene-edit.json + src/lib/server/glyph-paste.ts |
 | Reveal: Draft | Keyframed product moment, start frame to end frame, fast preview, no audio | LTX-2 19B distilled | workflows/vfx-ltx-reveal.json |
 | Reveal: Final | Same keyframes and protected paste, with native audio | MiniMax H3 (first+last frame) | workflows/hero-h3.json |
 | Hero clip | Motion with native audio | MiniMax H3 (first+last frame) | workflows/hero-h3.json |
-| Catalog still | Plain set, product composited (option B, superseded by recipes) | Qwen-Image-Edit 2509 | workflows/scene.json |
+| Retired | Cut-and-drop compositing (catalog set, Topography, Molten): the pack read as a sticker and could not integrate with liquid | Qwen-Image-Edit 2509 | scene.json, scene-set.json, scene-composite.json (kept in repo) |
 
 - Recipe rule: nothing occludes the protected label region. Effects stay behind or below the pack.
 
@@ -81,8 +80,8 @@ Fallback for judges: if the live key is out of credits, the deployed app serves 
 |---|---|---|---|
 | M0 | One Cloud call, image in, video out, displayed and downloadable | Wed 5:30pm | Done |
 | M1 | Cutout, scene stills (option B composite), LTX reveal, post step | Wed 9pm | Done (commit f22715f): 3 label-exact scenes in 20s, LTX reveal end strength 0.9 tested, post-vfx.ts |
-| M2 | MiniMax H3 reveal with native audio, side by side with LTX; H3 hero clip | Wed 11:59pm | In progress: H3 reveal + side by side (c5c9edb); recipes Topography and Molten first pass (362f724), tweaks pending (section 14); H3 transients pending; hero clip next |
-| M3 | Brand step: cached Tauvel kit, URL field wired to Extractor | Thu 10am | |
+| M2 | MiniMax H3 reveal with native audio, side by side with LTX; H3 hero clip | Wed 11:59pm | Done for the demo: H3 reveal + side by side (c5c9edb); Scene still passed (relight in place + glyph paste). H3 transients pending James's listen; hero clip is cut-list item 4 |
+| M3 | Real UI flow replacing the M0 page: Brand (cached Tauvel kit, URL field), Product with Protect, Create with recipes, Review, Export | Thu 10am | Started |
 | M3.5 | Protect step, label-match score, recipe picker | Thu 12pm | Started: protect mask built (glyph pixels, assets/tauvel/packshot-v1-protect.png) and enforced by every recipe (362f724); Protect UI, label-match badge and recipe picker pending |
 | M4 | Review grid, claims guard, export sizes, end card, disclosure badge | Thu 3pm | |
 | M4.5 | Colorway preview (stretch, first to cut) | Thu 4pm | |
@@ -157,6 +156,7 @@ Never cut: Protect + label match, claims guard + disclosure badge, workflow JSON
 - Wed 6:33pm: Repo public at github.com/jhoard/open-ads-studio; push after every milestone commit.
 - Wed 6:34pm: LTX video sides must be multiples of 64. 720 was silently rendered as 704 and misaligned the protected paste; 9:16 is now 704x1280.
 - Wed 6:36pm: CLAUDE.md people rule reworded: no identifiable people or likenesses; distant silhouettes for scale are fine.
+- Wed 7:14pm: Scene recipe is relight in place: Qwen-Image-Edit takes the packshot itself, the box is detected (Qwen reframes the shot), and only the glyphs are pasted back, tone-matched by local face luminance, with a 25% flipped copy fading into the reflection. Cut-and-drop retired; Molten cut (can't integrate with liquid).
 
 ## 13. Repeatable parts (future skills)
 
@@ -167,9 +167,7 @@ Never cut: Protect + label match, claims guard + disclosure badge, workflow JSON
 
 ## 14. Pending tweaks
 
-- Topography: stronger chocolate + contour-strata wording, broad foreground plateau instead of "rim", harmonize at 0.5 with sun side named.
-- Molten: cut. Cut-and-drop compositing can't integrate with liquid.
-- Still test (relight in place): Qwen-Image-Edit takes `packshot-v1-green.png` itself as the input and rebuilds the background (dark slate, hard beam from the left, espresso cup, reflection under the pack). Then `src/lib/server/glyph-paste.ts` detects the box (green-pixel bounds, then gradient NCC over independent x and y scales and shift) and pastes back only the `packshot-v1-protect.png` glyphs. Script: `scripts/run-relight.ts`. First run (seed 7): Qwen reframes the shot (box at about 0.68x, slightly squashed), so "stays in place" does not hold, but detection registers it (NCC 0.62 on the 4-step run) and the pasted label is clean. Pending James's pass or fail on `var/relight/s7/fast-2-final.png`. On a fail, go studio-only and start M3.
+- Still test: passed. Scene = relight in place + glyph paste (tone-matched, plus reflected glyphs); cut-and-drop retired, Molten cut. Seed 7 example (var/relight/s7/fast-2-final.png) is the Scene example in the UI.
 - H3 transients at 1.8s/2.9s: pending
 - Live link: rate limit or demo mode by default before the link goes public.
 - Page copy promises native audio from LTX; fix when the M3 flow replaces it.

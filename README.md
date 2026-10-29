@@ -4,7 +4,7 @@ An open-weights rebuild of Higgsfield Ads Studio, built for Comfy's "Open Source
 
 Product photo + brand kit in. Label-exact ad stills and short video with audio out. Every generation step is an open-weight model running as a ComfyUI workflow; the JSON for each one is in [`/workflows`](workflows).
 
-**What makes it different:** AI ad tools garble packaging. Open Ads Studio never lets a model repaint the label. The product is composited at a matched camera, its gold glyphs are a protected region pasted back after every generative pass, and motion is keyframed from first and last frames.
+**What makes it different:** AI ad tools garble packaging. Open Ads Studio never lets a model repaint the label. The model relights the real packshot in place, then its gold glyphs, a protected region, are found and pasted back tone-matched to the scene, and motion is keyframed from first and last frames.
 
 **Live:** https://open-ads-studio.vercel.app (early build, auto-deployed from `main`).
 
@@ -14,12 +14,11 @@ Product photo + brand kit in. Label-exact ad stills and short video with audio o
 
 | Recipe | Output | Models | Workflows |
 |---|---|---|---|
-| Topography | Hero still: product on the rim of a chocolate canyon | Qwen-Image-Edit 2509, BiRefNet | `scene-set.json`, `scene-composite.json` |
-| Molten | VFX clip: a chocolate wave breaks behind the pack | Qwen-Image-Edit 2509, BiRefNet, LTX-2 | `scene-set.json`, `scene-edit.json`, `scene-composite.json`, `vfx-ltx-reveal.json` |
+| Scene | Hero still: the packshot relit in place on an art-directed set | Qwen-Image-Edit 2509 | `scene-edit.json` + glyph paste |
 | Reveal (Draft) | The bar rises out of the sleeve, fast preview | LTX-2 19B distilled | `vfx-ltx-reveal.json` |
 | Reveal (Final) | Same reveal with native audio | MiniMax H3-Base FL2VA | `hero-h3.json` |
 
-Deterministic steps (no model): set analysis (surface line, light side), product placement and shadows, protected-glyph paste, and post (`scripts/post-vfx.ts`: frame holds and an eased push-in, via ffmpeg).
+Deterministic steps (no model): box detection and the protected-glyph paste (tone-matched, plus its reflection), and post (`scripts/post-vfx.ts`: frame holds and an eased push-in, via ffmpeg).
 
 Rule for every recipe: nothing occludes the protected label region. Effects stay behind or below the pack.
 
@@ -40,8 +39,7 @@ The key stays server-side. `.env` is loaded with override, so it beats any key i
 Run recipes from the command line:
 
 ```bash
-npx tsx scripts/run-recipe.ts topography
-npx tsx scripts/run-recipe.ts molten
+npx tsx scripts/run-relight.ts                                  # Scene still (relight in place + glyph paste)
 npx tsx scripts/run-vfx.ts vfx-reveal 3:4 "<motion prompt>"     # Reveal, Draft (LTX-2)
 npx tsx scripts/run-vfx.ts hero-h3 3:4 "<motion prompt>"        # Reveal, Final (H3)
 npx tsx scripts/post-vfx.ts in.mp4 out.mp4                      # holds + push-in
