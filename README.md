@@ -75,7 +75,52 @@ Outputs land in `var/` (git-ignored).
 ### Backends
 
 - **Comfy Cloud (default):** the app submits the API-format workflows in `/workflows` to `cloud.comfy.org` with the `@comfyorg/sdk` workflow client. All checkpoints are open weights hosted there; the workflows contain no API (partner) nodes.
-- **Your own GPU:** run ComfyUI with [`comfy-api-proxy`](https://github.com/Comfy-Org/comfy-api-proxy) and set `COMFY_BASE_URL=http://127.0.0.1:8189`. The same workflow JSONs run unchanged. Model files and a Runpod template are documented in a later milestone (see the playbook).
+- **Your own GPU:** see [Run it yourself](#run-it-yourself). Same workflow JSONs, pointed at your ComfyUI with `COMFY_BASE_URL`.
+
+## Run it yourself
+
+The app talks to any Comfy API v2 surface. Comfy Cloud is the default; to use your own GPU, run ComfyUI, put [`comfy-api-proxy`](https://github.com/Comfy-Org/comfy-api-proxy) (MIT) in front of it, and point the app at the proxy:
+
+```bash
+# 1. ComfyUI v0.43.0 or newer (SaveImageAdvanced, used by scene-edit, landed in v0.40.0)
+git clone https://github.com/Comfy-Org/ComfyUI && cd ComfyUI && git checkout v0.43.0
+pip install -r requirements.txt
+# cutout only: the BiRefNet node pack (GPL-3.0); every other node is core ComfyUI
+git clone https://github.com/1038lab/ComfyUI-RMBG custom_nodes/ComfyUI-RMBG
+pip install -r custom_nodes/ComfyUI-RMBG/requirements.txt
+python main.py                      # serves 127.0.0.1:8188
+
+# 2. The v2 API proxy, in another shell
+pip install comfy-api-proxy
+comfy-api-proxy --comfyui http://127.0.0.1:8188 --port 8189
+
+# 3. The app, with no Cloud key needed
+COMFY_BASE_URL=http://127.0.0.1:8189 npm run dev
+```
+
+`COMFY_BASE_URL` is read by `@comfyorg/sdk` itself (`new Comfy()` in `src/lib/server/jobs.ts`); unset, it targets `https://cloud.comfy.org`. A Runpod pod or any other host works the same way: run ComfyUI and the proxy there and set `COMFY_BASE_URL` to its URL.
+
+Model files go in `ComfyUI/models/<folder>/` with exactly these names (the workflows reference them by filename):
+
+| Workflow | Folder | File | Size | Download |
+|---|---|---|---|---|
+| `cutout.json` | `RMBG/BiRefNet/` | `BiRefNet-general.safetensors` | 0.9 GB | [1038lab/BiRefNet](https://huggingface.co/1038lab/BiRefNet) (the node downloads it on first run) |
+| `scene-edit.json` | `diffusion_models/` | `qwen_image_edit_2509_fp8_e4m3fn.safetensors` | 20.4 GB | [Comfy-Org/Qwen-Image-Edit_ComfyUI](https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2509_fp8_e4m3fn.safetensors) |
+| | `text_encoders/` | `qwen_2.5_vl_7b_fp8_scaled.safetensors` | 9.4 GB | [Comfy-Org/Qwen-Image_ComfyUI](https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors) |
+| | `vae/` | `qwen_image_vae.safetensors` | 0.25 GB | [Comfy-Org/Qwen-Image_ComfyUI](https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/vae/qwen_image_vae.safetensors) |
+| | `loras/` | `Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors` | 0.85 GB | [lightx2v/Qwen-Image-Lightning](https://huggingface.co/lightx2v/Qwen-Image-Lightning/resolve/main/Qwen-Image-Edit-2509/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors) |
+| `vfx-ltx-reveal.json` | `checkpoints/` | `ltx-2-19b-distilled.safetensors` | 43.3 GB | [Lightricks/LTX-2](https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-19b-distilled.safetensors) |
+| | `text_encoders/` | `gemma_3_12B_it_fp4_mixed.safetensors` | 9.5 GB | [Comfy-Org/ltx-2](https://huggingface.co/Comfy-Org/ltx-2/resolve/main/split_files/text_encoders/gemma_3_12B_it_fp4_mixed.safetensors) |
+| | `latent_upscale_models/` | `ltx-2-spatial-upscaler-x2-1.0.safetensors` | 1.0 GB | [Lightricks/LTX-2](https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-spatial-upscaler-x2-1.0.safetensors) |
+| `hero-h3.json` | `diffusion_models/` | `minimax_h3_fl2va_pruned_int8_convrot.safetensors` | 21.0 GB | [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors) |
+| | `text_encoders/` | `qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors` | 15.7 GB | [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors) |
+| | `vae/` | `minimax_h3_video_vae_fp16.safetensors` | 5.2 GB | [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors) |
+| | `vae/` | `minimax_h3_audio_vae_fp32.safetensors` | 0.6 GB | [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors) |
+| | `loras/` | `minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors` | 2.0 GB | [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors) (the switch defaults to off: 20 steps) |
+
+Totals: cutout 0.9 GB, Scene 31 GB, Reveal Draft 54 GB, Reveal Final and Cinemagraph 44 GB. Sizes are from the Hugging Face file listings.
+
+**What is verified where.** Every workflow here has run end to end on Comfy Cloud: Scene, both Reveals and Cinemagraph through the app, cutout from the command line (5.7 s). None of the workflows has been run against a self-hosted ComfyUI yet, so the local path above is unverified: the filenames, folders and node set match what Comfy Cloud reports for these exact workflows (its `object_info`), but VRAM needs and speed on consumer GPUs are untested.
 
 ## Workflows
 
