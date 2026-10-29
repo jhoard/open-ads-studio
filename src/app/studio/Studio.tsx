@@ -36,6 +36,7 @@ interface Preview {
   reveal?: LabelReveal | null;
   revealKey?: string;
   empty?: string;
+  comparison?: { beforeUrl: string } | null;
 }
 
 const mediaOf = (creative: Creative, raw: boolean): PreviewMedia => ({
@@ -53,7 +54,6 @@ export function Studio() {
   const [step, setStep] = useState(0);
   const [createPreview, setCreatePreview] = useState<CreatePreview>({ recipe: "scene", directionId: undefined });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showModel, setShowModel] = useState(false);
   const studio = useCreatives();
   const controlsRef = useRef<HTMLElement>(null);
   const previousStep = useRef(step);
@@ -100,18 +100,16 @@ export function Studio() {
   const create = async (requests: CreateRequest[], objective: Objective): Promise<void> => {
     await studio.create(requests, objective);
     setSelectedId(null);
-    setShowModel(false);
     setStep(REVIEW);
   };
 
   const select = (id: string): void => {
     setSelectedId(id);
-    setShowModel(false);
   };
 
   const preview = useMemo((): Preview | null => {
     if (!data || !brand) return null;
-    if (step === BRAND) return { media: null, title: brand.name, detail: "Your brand kit. Preview updates as you edit." };
+    if (step === BRAND) return { media: null, title: brand.name, detail: "Identity reference" };
     if (step === PRODUCT) {
       const share = data.product.protectedShare === null ? "" : `${(data.product.protectedShare * 100).toFixed(1)}% of the photo is protected`;
       return { media: { kind: "image", url: data.product.photoUrl }, title: data.product.name, detail: share };
@@ -128,16 +126,17 @@ export function Studio() {
     }
     if (!selected) return { media: null, title: step === REVIEW ? "Review" : "Export", empty: step === REVIEW ? "Make creatives in Create to review them here." : "Approve creatives in Review to export them." };
     if (!isReady(selected)) return { media: null, title: selected.label, empty: "Rendering on Comfy Cloud. The preview appears when it lands." };
-    const raw = step === REVIEW && showModel;
+    const comparing = step === REVIEW && Boolean(selected.rawUrl);
     const scored = selected.labelMatch !== null && selected.modelLabelMatch !== null;
     return {
-      media: mediaOf(selected, raw),
-      title: raw ? `${selected.label}, model output before the label restore` : selected.label,
+      media: mediaOf(selected, false),
+      comparison: comparing ? { beforeUrl: selected.rawUrl as string } : null,
+      title: selected.label,
       detail: step === EXPORT ? `"${studio.copy[selected.id] ?? defaultCopy(selected, data.copyLines)}"` : undefined,
-      reveal: step === REVIEW && scored && !raw ? { from: selected.modelLabelMatch as number, to: selected.labelMatch as number } : null,
+      reveal: step === REVIEW && scored && !comparing ? { from: selected.modelLabelMatch as number, to: selected.labelMatch as number } : null,
       revealKey: selected.id,
     };
-  }, [data, brand, step, createPreview, selected, showModel, studio.copy]);
+  }, [data, brand, step, createPreview, selected, studio.copy]);
 
   const protectOverlay =
     step === PRODUCT && showProtect && data?.product.protectMaskUrl ? (
@@ -149,9 +148,10 @@ export function Studio() {
       <a className="skip-link" href="#studio-editor">Skip to editor</a>
       <nav className="rail" aria-label="Creative workflow">
         <p className="rail-mark" aria-label="Open Ads Studio">
-          <span>Open Ads Studio</span>
-          <span className="rail-subtitle">Creative workspace</span>
+          <span>Open Ads<span className="wordmark-dot" aria-hidden="true">.</span></span>
+          <span className="rail-subtitle">Studio</span>
         </p>
+        <span className="rail-section-label">Workspace</span>
         <ol>
           {STEPS.map((entry, index) => (
             <li key={entry.id}>
@@ -162,7 +162,7 @@ export function Studio() {
                 aria-describedby={!unlocked[index] ? `step-${entry.id}-reason` : undefined}
                 onClick={() => { if (unlocked[index]) setStep(index); }}
               >
-                <span className="step-number" aria-hidden="true">{index + 1}</span>
+                <span className="step-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
                 <span className="step-name">{entry.name}</span>
                 <span className="visually-hidden">{index === step ? ", current step" : !unlocked[index] ? ", unavailable" : ""}</span>
               </button>
@@ -172,15 +172,14 @@ export function Studio() {
             </li>
           ))}
         </ol>
+        <div className="rail-bottom">
+          {data && <p className="mode-pill" data-mode={data.mode}><span className="mode-dot" aria-hidden="true" />{data.mode === "demo" ? "Demo workspace" : "Live generation"}</p>}
+          <p>{data?.mode === "demo" ? "Example renders. No generation." : "Powered by ComfyUI"}</p>
+        </div>
       </nav>
 
       <main className="controls" id="studio-editor" ref={controlsRef} tabIndex={-1}>
-        <div className="workspace-context"><span>Step {step + 1} of {STEPS.length}</span><span>Brand to ad creative</span></div>
-        {data && (
-          <p className="mode-pill" data-mode={data.mode}>
-            {data.mode === "demo" ? "Demo workspace: explore example renders" : "Live workspace: generation enabled"}
-          </p>
-        )}
+        <div className="workspace-context"><span>{brand?.name ?? "Workspace"}</span><span>{String(step + 1).padStart(2, "0")} / 05</span></div>
         {loadError && <p className="notice notice-error" role="alert">{loadError}</p>}
         {data && brand ? (
           <>
@@ -206,8 +205,6 @@ export function Studio() {
                 copy={studio.copy}
                 copyLines={data.copyLines}
                 safety={data.safety}
-                showModel={showModel}
-                onShowModel={setShowModel}
                 onSelect={select}
                 onCopyChange={studio.setCopy}
                 onToggleApproved={studio.toggleApproved}
@@ -236,7 +233,7 @@ export function Studio() {
               )}
               {step < STEPS.length - 1 && step !== CREATE && (
                 <button className="button" type="button" disabled={!unlocked[step + 1]} onClick={() => setStep(step + 1)}>
-                  Continue to {STEPS[step + 1].name}
+                  Continue to {STEPS[step + 1].name}<span aria-hidden="true">↗</span>
                 </button>
               )}
               </div>
@@ -255,6 +252,7 @@ export function Studio() {
           reveal={preview.reveal}
           revealKey={preview.revealKey}
           empty={preview.empty}
+          comparison={preview.comparison}
           overlay={protectOverlay}
           custom={step === BRAND && brand ? <BrandPreview kit={brand} /> : undefined}
         />

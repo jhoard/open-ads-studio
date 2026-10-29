@@ -12,7 +12,7 @@ interface BrandStepProps {
 
 const MAX_IMPORT_BYTES = 512 * 1024;
 const SOURCE_LABEL: Record<BrandKit["source"], string> = {
-  cached: "Example brand kit",
+  cached: "Preloaded kit",
   crawl: "Extracted from the site",
   import: "Imported from DESIGN.md",
 };
@@ -86,12 +86,12 @@ export function BrandStep({ kit, catalog, onKit }: BrandStepProps) {
   return (
     <section className="step" aria-labelledby="brand-heading">
       <h1 id="brand-heading" className="step-title">
-        Set up your brand
+        Brand kit
       </h1>
-      <p className="step-lede">Start with a website or use the example kit below. Review the details that will guide your creatives.</p>
+      <p className="step-lede">Your identity, type and voice. The reference for every creative.</p>
 
       <details className="form-section brand-import">
-      <summary><span>Import a different brand</span><span className="optional-label">Website or .md file</span></summary>
+      <summary><span>Import brand</span><span className="optional-label">URL / .md</span></summary>
       <form className="field" onSubmit={extract} aria-busy={busy}>
         <label htmlFor="brand-url">Brand website</label>
         <div className="inline-form">
@@ -113,7 +113,6 @@ export function BrandStep({ kit, catalog, onKit }: BrandStepProps) {
           Reading brand details from {url}. This usually takes 10 to 40 seconds.
         </p>
       )}
-      {notice && <p className="notice" role="status">{notice}</p>}
       {error && (
         <p className="notice notice-error" role="alert">
           {error}
@@ -121,33 +120,40 @@ export function BrandStep({ kit, catalog, onKit }: BrandStepProps) {
       )}
 
       </details>
+      {notice && <p className="notice" role="status">{notice}</p>}
 
-      <section className="form-section" aria-labelledby="brand-kit-heading">
-      <div className="kit-head">
-        <div>
-          <h2 id="brand-kit-heading" className="step-subtitle">{kit.name}</h2>
-          <p className="hint">{SOURCE_LABEL[kit.source]}</p>
+      <section className="active-kit" aria-labelledby="brand-kit-heading">
+        <div className="kit-head">
+          <div>
+            <p className="section-eyebrow">Active brand</p>
+            <h2 id="brand-kit-heading" className="step-subtitle">{kit.name}</h2>
+            <p className="hint">{SOURCE_LABEL[kit.source]}</p>
+          </div>
+          <button className="button button-secondary" type="button" onClick={() => download(kit)}>
+            Download kit
+          </button>
         </div>
-        <button className="button button-secondary" type="button" onClick={() => download(kit)}>
-          Download kit
-        </button>
-      </div>
-
-      <p className="hint">Edit your brand voice. Changes appear in the preview.</p>
-      <div className="field">
-        <label htmlFor="brand-tagline">Tagline</label>
-        <input id="brand-tagline" value={kit.tagline} onChange={(event) => onKit({ ...kit, tagline: event.target.value })} />
-      </div>
-      <div className="field">
-        <label htmlFor="brand-tone">Tone</label>
-        <textarea id="brand-tone" value={kit.tone} placeholder="How the brand sounds, in a sentence or two" onChange={(event) => onKit({ ...kit, tone: event.target.value })} />
-      </div>
-      <div className="field">
-        <label htmlFor="brand-audience">Audience</label>
-        <textarea id="brand-audience" value={kit.audience} placeholder="Who buys it, and when" onChange={(event) => onKit({ ...kit, audience: event.target.value })} />
-      </div>
       </section>
-      <fieldset className="form-section scene-directions" aria-describedby="scene-directions-help">
+
+      <section className="editor-group" aria-labelledby="brand-voice-heading">
+        <header className="editor-group-heading">
+          <h2 id="brand-voice-heading">Brand voice</h2>
+          <p>Set the message, tone and audience for your creatives.</p>
+        </header>
+        <div className="field">
+          <label htmlFor="brand-tagline">Tagline</label>
+          <input id="brand-tagline" value={kit.tagline} onChange={(event) => onKit({ ...kit, tagline: event.target.value })} />
+        </div>
+        <div className="field">
+          <label htmlFor="brand-tone">Tone of voice</label>
+          <textarea id="brand-tone" rows={4} value={kit.tone} placeholder="How the brand sounds, in a sentence or two" onChange={(event) => onKit({ ...kit, tone: event.target.value })} />
+        </div>
+        <div className="field">
+          <label htmlFor="brand-audience">Target audience</label>
+          <textarea id="brand-audience" rows={3} value={kit.audience} placeholder="Who buys it, and when" onChange={(event) => onKit({ ...kit, audience: event.target.value })} />
+        </div>
+      </section>
+      <fieldset className="editor-group scene-directions" aria-describedby="scene-directions-help">
         <legend>Scene directions</legend>
         <p className="hint" id="scene-directions-help">Choose one or more settings for your product.</p>
         <div className="field">

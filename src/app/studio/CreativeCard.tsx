@@ -67,15 +67,13 @@ interface CreativeDetailProps {
   copy: string;
   copyLines: Record<Objective, string[]>;
   safety: BrandSafety;
-  showModel: boolean;
-  onShowModel: (show: boolean) => void;
   onCopyChange: (text: string) => void;
   onToggleApproved: () => void;
   onRemove: () => void;
 }
 
 /** The selected creative's review controls: scores, copy line with the claims guard, approve. */
-export function CreativeDetail({ creative, approved, copy, copyLines, safety, showModel, onShowModel, onCopyChange, onToggleApproved, onRemove }: CreativeDetailProps) {
+export function CreativeDetail({ creative, approved, copy, copyLines, safety, onCopyChange, onToggleApproved, onRemove }: CreativeDetailProps) {
   const ready = isReady(creative);
   const blocked = claimsFor(copy, safety).status === "blocked";
   return (
@@ -94,11 +92,6 @@ export function CreativeDetail({ creative, approved, copy, copyLines, safety, sh
         {ready && (
           <button className="button" type="button" aria-pressed={approved} disabled={blocked && !approved} onClick={onToggleApproved}>
             {approved ? "Approved" : "Approve"}
-          </button>
-        )}
-        {ready && creative.rawUrl && (
-          <button className="button button-secondary" type="button" aria-pressed={showModel} onClick={() => onShowModel(!showModel)}>
-            {showModel ? "Show final" : "Show model output"}
           </button>
         )}
         <button className="button button-secondary" type="button" onClick={onRemove}>

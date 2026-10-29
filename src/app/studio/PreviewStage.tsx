@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { ComparisonSlider } from "./ComparisonSlider";
 
 export interface PreviewMedia {
   kind: "image" | "video";
@@ -65,9 +66,10 @@ interface PreviewStageProps {
   /** Replaces the media entirely, for the Brand step. */
   custom?: ReactNode;
   empty?: string;
+  comparison?: { beforeUrl: string } | null;
 }
 
-export function PreviewStage({ media, title, detail, reveal, revealKey, overlay, custom, empty }: PreviewStageProps) {
+export function PreviewStage({ media, title, detail, reveal, revealKey, overlay, custom, empty, comparison }: PreviewStageProps) {
   const video = useRef<HTMLVideoElement>(null);
   const glyphStyle = media?.glyphsUrl ? ({ "--glyphs-url": `url(${media.glyphsUrl})` } as CSSProperties) : undefined;
 
@@ -78,10 +80,12 @@ export function PreviewStage({ media, title, detail, reveal, revealKey, overlay,
 
   return (
     <section className="preview" aria-label="Preview">
-      <div className="preview-toolbar"><span>{custom ? "Brand preview" : "Creative preview"}</span><span>{custom ? "Updates as you edit" : "Preview before exporting"}</span></div>
+      <div className="preview-toolbar"><span>{custom ? "Identity board" : "Creative preview"}</span><span>{custom ? "Live preview" : "Preview before exporting"}</span></div>
       <div className="preview-frame">
         {custom ??
-          (media ? (
+          (media ? comparison ? (
+            <ComparisonSlider key={`${media.url}-${comparison.beforeUrl}`} kind={media.kind} beforeUrl={comparison.beforeUrl} afterUrl={media.url} title={title} />
+          ) : (
             <figure className="preview-media" key={`${media.url}-${revealKey ?? ""}`}>
               {media.kind === "image" ? (
                 <img src={media.url} alt={title} />
