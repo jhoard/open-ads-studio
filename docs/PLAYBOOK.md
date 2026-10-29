@@ -61,7 +61,7 @@ Mirrors Higgsfield Ads Studio: Brand, Product, Create, Review, Export.
 | Code | ~/AI/comfy-hackathon on James's Mac, edited by Claude Code | Push to GitHub after every milestone |
 | App (dev) | Next.js dev server on the Mac | localhost only |
 | Generation | Comfy Cloud via @comfyorg/sdk | SF Build Night workspace key in .env |
-| App (public) | Vercel | Uses a Personal Workspace key (open-ads-studio-prod), not the event key |
+| App (public) | Vercel: https://open-ads-studio.vercel.app, auto-deploys from main | COMFY_API_KEY is James's Personal Workspace key (open-ads-studio-prod), not the event key. Not yet ready to share: see section 14 |
 | Local run path | Any NVIDIA box or a Runpod template, ComfyUI + workflow JSONs | Must be verified once before submitting |
 
 Fallback for judges: if the live key is out of credits, the deployed app serves cached Tauvel outputs in a clearly labeled demo mode.
@@ -170,3 +170,6 @@ Never cut: Protect + label match, claims guard + disclosure badge, workflow JSON
 - Topography: stronger chocolate + contour-strata wording, broad foreground plateau instead of "rim", harmonize at 0.5 with sun side named.
 - Molten: end strength 0.6 to 0.7 and more frames so the wave builds over ~2s; add a pool reflection under the pack so it doesn't hover.
 - H3 transients at 1.8s/2.9s: pending
+- Live link: rate limit or demo mode by default before the link goes public.
+- Page copy promises native audio from LTX; fix when the M3 flow replaces it.
+- Live link storage (found from code, not yet tested live): job records, uploads and outputs go to `var/` on local disk, which is read-only on Vercel outside /tmp and not shared between function instances, so submits from the deployed app will fail. Move to Vercel Blob (planned in M5) before relying on the live link.

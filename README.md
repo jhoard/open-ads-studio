@@ -6,6 +6,8 @@ Product photo + brand kit in. Label-exact ad stills and short video with audio o
 
 **What makes it different:** AI ad tools garble packaging. Open Ads Studio never lets a model repaint the label. The product is composited at a matched camera, its gold glyphs are a protected region pasted back after every generative pass, and motion is keyframed from first and last frames.
 
+**Live:** https://open-ads-studio.vercel.app (early build, auto-deployed from `main`).
+
 > Status: in active development during the event. See [`docs/PLAYBOOK.md`](docs/PLAYBOOK.md) for the plan, milestones and decisions.
 
 ## How it works
