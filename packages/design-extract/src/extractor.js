@@ -1,6 +1,7 @@
 // Vendored from James Hoard's Design Extractor (~/AI/design-creator, src/extractor.js).
 // Changes for Open Ads Studio: the browser is injected (local Playwright or serverless
-// Chromium), the crawl has a hard time budget, and the screenshot step is dropped.
+// Chromium), the caller can guard the context (request filtering), the crawl has a hard
+// time budget, and the screenshot step is dropped.
 import { extractColors } from './extractors/colors.js';
 import { extractTypography } from './extractors/typography.js';
 import { extractSpacing } from './extractors/spacing.js';
@@ -20,10 +21,10 @@ const SETTLE_MS = 800;
 /**
  * Main extraction orchestrator.
  * @param {string} url
- * @param {{ launch: () => Promise<import('playwright-core').Browser>, onProgress?: (msg: string) => void }} options
+ * @param {{ launch: () => Promise<import('playwright-core').Browser>, prepareContext?: (context: import('playwright-core').BrowserContext) => Promise<void>, beforeExtract?: () => Promise<void>, onProgress?: (msg: string) => void }} options
  */
 export async function extractDesign(url, options) {
-  const { launch, onProgress } = options;
+  const { launch, prepareContext, beforeExtract, onProgress } = options;
   const log = (msg) => onProgress?.(msg);
 
   log('Launching browser...');
@@ -33,6 +34,8 @@ export async function extractDesign(url, options) {
     userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   });
 
+  // Before any navigation, so every request the page makes passes the caller's guard.
+  await prepareContext?.(context);
   const page = await context.newPage();
 
   try {
@@ -49,6 +52,9 @@ export async function extractDesign(url, options) {
     await autoScroll(page);
     await page.waitForTimeout(SETTLE_MS);
     await page.evaluate(() => window.scrollTo(0, 0));
+
+    // The caller can stop here, before anything is read from the page (for example, a redirect to a private host).
+    await beforeExtract?.();
 
     const title = await page.title();
 

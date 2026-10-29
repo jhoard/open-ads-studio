@@ -1,5 +1,5 @@
 // Types for the parts of the extractor's output Open Ads Studio reads. The rest stays untyped.
-import type { Browser } from "playwright-core";
+import type { Browser, BrowserContext } from "playwright-core";
 
 export interface ExtractedColors {
   primary: string[];
@@ -32,5 +32,5 @@ export interface ExtractedDesign {
 
 export function extractDesign(
   url: string,
-  options: { launch: () => Promise<Browser>; onProgress?: (message: string) => void },
+  options: { launch: () => Promise<Browser>; prepareContext?: (context: BrowserContext) => Promise<void>; beforeExtract?: () => Promise<void>; onProgress?: (message: string) => void },
 ): Promise<{ markdown: string; data: ExtractedDesign }>;
