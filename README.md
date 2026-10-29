@@ -19,7 +19,7 @@ Product photo + brand kit in. Label-exact ad stills and short video with audio o
 | Reveal (Final) | Same reveal with native audio | MiniMax H3-Base FL2VA | `hero-h3.json` |
 | Cinemagraph | A Scene still comes alive: steam, light, room tone | MiniMax H3-Base FL2VA | `hero-h3.json` + per-frame glyph paste |
 
-Deterministic steps (no model): box detection and the protected-glyph paste (tone-matched, plus its reflection), and post (`scripts/post-vfx.ts`: frame holds and an eased push-in, via ffmpeg).
+Deterministic steps (no model): copy-line templates and the claims guard, export layouts (9:16, 1:1, 16:9) with the logo, end card and AI-disclosure badge, box detection and the protected-glyph paste (tone-matched, plus its reflection), and post (`scripts/post-vfx.ts`: frame holds and an eased push-in, via ffmpeg).
 
 Rule for every recipe: nothing occludes the protected label region. Effects stay behind or below the pack.
 
@@ -38,6 +38,8 @@ npm run dev               # http://localhost:3000
 The key stays server-side. `.env` is loaded with override, so it beats any key in your shell.
 
 `GENERATION_MODE=demo` serves the bundled example renders and never calls Comfy; it is the default on Vercel, so a public link cannot spend credits. Locally the default is `live`.
+
+Tests: `npm test` (claims guard and export layouts).
 
 Run recipes from the command line:
 
@@ -81,6 +83,8 @@ Models (weights are not included in this repo and keep their own licenses):
 - [LTX-2](https://huggingface.co/Lightricks/LTX-2) by Lightricks, LTX-2 Community License
 - [MiniMax H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) H3-Base, MiniMax H3 Community License
 - [BiRefNet](https://huggingface.co/ZhengPeng7/BiRefNet), MIT
+
+Fonts in `assets/fonts` (Gilda Display, Lato) are under the SIL Open Font License 1.1; license files sit next to them.
 
 Built on [ComfyUI](https://github.com/comfyanonymous/ComfyUI), [Comfy Cloud](https://cloud.comfy.org) and the [`@comfyorg/sdk`](https://github.com/Comfy-Org/comfy-typescript-sdk) (MIT).
 

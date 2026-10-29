@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { Creative } from "@/lib/studio";
+import type { BrandSafety, Creative, Objective } from "@/lib/studio";
+import { CopyLine, claimsFor } from "./CopyLine";
 
 const STATUS_LABEL: Record<Creative["status"], string> = {
   queued: "Queued",
@@ -29,11 +30,16 @@ function Status({ creative }: { creative: Creative }) {
 interface CreativeCardProps {
   creative: Creative;
   approved: boolean;
+  copy: string;
+  copyLines: Record<Objective, string[]>;
+  safety: BrandSafety;
+  onCopyChange: (text: string) => void;
   onToggleApproved: () => void;
   onRemove: () => void;
 }
 
-export function CreativeCard({ creative, approved, onToggleApproved, onRemove }: CreativeCardProps) {
+export function CreativeCard({ creative, approved, copy, copyLines, safety, onCopyChange, onToggleApproved, onRemove }: CreativeCardProps) {
+  const blocked = claimsFor(copy, safety).status === "blocked";
   const [showModel, setShowModel] = useState(false);
   const ready = creative.status === "succeeded" && creative.outputUrl !== null;
   const media = showModel && creative.rawUrl ? creative.rawUrl : creative.outputUrl;
@@ -60,11 +66,15 @@ export function CreativeCard({ creative, approved, onToggleApproved, onRemove }:
         <div className="badges">
           {creative.labelMatch !== null && <span className="badge badge-ok">Label match {percent(creative.labelMatch)}</span>}
           {creative.modelLabelMatch !== null && <span className="badge badge-muted">Model alone {percent(creative.modelLabelMatch)}</span>}
+          <span className="badge badge-risk" title={safety.riskReason}>
+            Risk: {safety.riskRating}, {safety.subcategories[0]}
+          </span>
           {creative.demo && <span className="badge badge-muted">Example render</span>}
         </div>
+        {ready && <CopyLine value={copy} objective={creative.objective ?? "awareness"} lines={copyLines} safety={safety} onChange={onCopyChange} />}
         <div className="creative-actions">
           {ready && (
-            <button className="button" type="button" aria-pressed={approved} onClick={onToggleApproved}>
+            <button className="button" type="button" aria-pressed={approved} disabled={blocked && !approved} onClick={onToggleApproved}>
               {approved ? "Approved" : "Approve"}
             </button>
           )}

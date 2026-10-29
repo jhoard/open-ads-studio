@@ -1,0 +1,15 @@
+{
+  "category": "Food & beverage",
+  "subcategories": ["supplements", "functional confectionery"],
+  "riskRating": "medium",
+  "riskReason": "Supplement (5 g creatine): health and performance claims need FTC substantiation and FDA structure/function language.",
+  "claimsGuard": {
+    "blockedPhrases": ["cures", "clinically proven", "guaranteed", "burns fat", "treats"],
+    "requiresSubstantiation": ["builds muscle", "boosts performance", "improves focus"]
+  },
+  "disclosureRequirements": [
+    "AI-generated imagery and video; disclose per EU AI Act Art. 50 and FTC endorsement guidelines",
+    "Supplement: structure/function claims only, no disease claims"
+  ],
+  "disclosureBasis": ["EU AI Act Art. 50", "FTC Endorsement Guides"]
+}

@@ -660,3 +660,62 @@ video {
   justify-content: flex-start;
   margin-top: 0.75rem;
 }
+
+/* Copy line and claims guard */
+
+.copy-line {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.copy-line select,
+.copy-line textarea {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--color-ink);
+}
+
+.copy-line textarea {
+  min-height: 3.2rem;
+  resize: vertical;
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.claims {
+  margin: 0;
+  font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.55rem;
+}
+
+.claims-clear {
+  color: var(--color-ok);
+}
+
+.claims-flagged {
+  color: var(--color-warn);
+  background: #f8efd9;
+  border: 1px solid #ead39f;
+}
+
+.claims-blocked {
+  color: var(--color-error);
+  background: #f6e1de;
+  border: 1px solid #e7b7b1;
+}
+
+.badge-risk {
+  color: var(--color-warn);
+  border-color: #ead39f;
+  background: #fbf4e4;
+}
+
+.export-detail {
+  display: grid;
+  gap: 0.5rem;
+}

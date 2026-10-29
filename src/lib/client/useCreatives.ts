@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RecipeId } from "@/lib/recipes";
-import type { Creative } from "@/lib/studio";
+import type { Creative, Objective } from "@/lib/studio";
 import { TERMINAL_STATUSES, type ApiError, type JobView } from "@/lib/types";
 
 const POLL_INTERVAL_MS = 3000;
@@ -16,28 +16,38 @@ export interface CreateRequest {
 export interface UseCreatives {
   creatives: Creative[];
   approved: Set<string>;
+  /** Copy line per creative, edited on the Review step. */
+  copy: Record<string, string>;
   error: string | null;
   submitting: boolean;
-  create: (requests: CreateRequest[]) => Promise<void>;
+  create: (requests: CreateRequest[], objective: Objective) => Promise<void>;
   toggleApproved: (id: string) => void;
+  setCopy: (id: string, text: string) => void;
   remove: (id: string) => void;
 }
 
+interface Stored {
+  creatives: Creative[];
+  approved: string[];
+  copy: Record<string, string>;
+}
+
 // Browser storage is a convenience only: creatives survive a refresh, and an empty or blocked store just starts fresh.
-function loadStored(): { creatives: Creative[]; approved: string[] } {
+function loadStored(): Stored {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { creatives: [], approved: [] };
-    const parsed = JSON.parse(raw) as { creatives?: Creative[]; approved?: string[] };
-    return { creatives: parsed.creatives ?? [], approved: parsed.approved ?? [] };
+    if (!raw) return { creatives: [], approved: [], copy: {} };
+    const parsed = JSON.parse(raw) as Partial<Stored>;
+    return { creatives: parsed.creatives ?? [], approved: parsed.approved ?? [], copy: parsed.copy ?? {} };
   } catch {
-    return { creatives: [], approved: [] };
+    return { creatives: [], approved: [], copy: {} };
   }
 }
 
-function store(creatives: Creative[], approved: Set<string>): void {
+function store(creatives: Creative[], approved: Set<string>, copy: Record<string, string>): void {
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ creatives, approved: [...approved] }));
+    const stored: Stored = { creatives, approved: [...approved], copy };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
   } catch {
     // Storage unavailable (private window, blocked site data): keep working in memory.
   }
@@ -57,6 +67,7 @@ const isRunning = (creative: Creative): boolean => !creative.demo && !TERMINAL_S
 export function useCreatives(): UseCreatives {
   const [creatives, setCreatives] = useState<Creative[]>([]);
   const [approved, setApproved] = useState<Set<string>>(new Set());
+  const [copy, setCopyMap] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const loaded = useRef(false);
@@ -65,12 +76,13 @@ export function useCreatives(): UseCreatives {
     const stored = loadStored();
     setCreatives(stored.creatives);
     setApproved(new Set(stored.approved));
+    setCopyMap(stored.copy);
     loaded.current = true;
   }, []);
 
   useEffect(() => {
-    if (loaded.current) store(creatives, approved);
-  }, [creatives, approved]);
+    if (loaded.current) store(creatives, approved, copy);
+  }, [creatives, approved, copy]);
 
   const running = creatives.filter(isRunning).map((creative) => creative.id).join(",");
   useEffect(() => {
@@ -98,7 +110,7 @@ export function useCreatives(): UseCreatives {
     return () => clearTimeout(timer);
   }, [running, creatives]);
 
-  const create = useCallback(async (requests: CreateRequest[]): Promise<void> => {
+  const create = useCallback(async (requests: CreateRequest[], objective: Objective): Promise<void> => {
     setSubmitting(true);
     setError(null);
     try {
@@ -113,7 +125,7 @@ export function useCreatives(): UseCreatives {
         }),
       );
       const failures = results.filter((result): result is ApiError => "error" in result);
-      const made = results.filter((result): result is Creative => !("error" in result));
+      const made = results.filter((result): result is Creative => !("error" in result)).map((creative) => ({ ...creative, objective }));
       if (failures.length) setError(failures.map((failure) => failure.error).join(" "));
       setCreatives((current) => [...made, ...current]);
     } catch {
@@ -132,6 +144,10 @@ export function useCreatives(): UseCreatives {
     });
   }, []);
 
+  const setCopy = useCallback((id: string, text: string): void => {
+    setCopyMap((current) => ({ ...current, [id]: text }));
+  }, []);
+
   const remove = useCallback((id: string): void => {
     setCreatives((current) => current.filter((creative) => creative.id !== id));
     setApproved((current) => {
@@ -141,5 +157,5 @@ export function useCreatives(): UseCreatives {
     });
   }, []);
 
-  return { creatives, approved, error, submitting, create, toggleApproved, remove };
+  return { creatives, approved, copy, error, submitting, create, toggleApproved, setCopy, remove };
 }

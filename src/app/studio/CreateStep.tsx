@@ -3,10 +3,9 @@
 import { useState } from "react";
 import type { CreateRequest } from "@/lib/client/useCreatives";
 import type { RecipeId, RecipeInfo } from "@/lib/recipes";
+import { OBJECTIVES, type Objective } from "@/lib/studio";
 import type { SceneDirection } from "@/lib/types";
 
-const OBJECTIVES = ["sales", "leads", "traffic", "awareness", "engagement"] as const;
-type Objective = (typeof OBJECTIVES)[number];
 
 interface CreateStepProps {
   recipes: readonly RecipeInfo[];
@@ -15,7 +14,7 @@ interface CreateStepProps {
   mode: "live" | "demo";
   submitting: boolean;
   error: string | null;
-  onCreate: (requests: CreateRequest[]) => void;
+  onCreate: (requests: CreateRequest[], objective: Objective) => void;
 }
 
 function RecipeMedia({ recipe }: { recipe: RecipeInfo }) {
@@ -39,7 +38,7 @@ export function CreateStep({ recipes, directions, hasReveal, mode, submitting, e
       return next;
     });
 
-  const create = (): void => onCreate([...selected].map((recipe) => ({ recipe, ...(recipe === "scene" ? { directionId } : {}) })));
+  const create = (): void => onCreate([...selected].map((recipe) => ({ recipe, ...(recipe === "scene" ? { directionId } : {}) })), objective);
 
   return (
     <section className="panel" aria-labelledby="create-heading">

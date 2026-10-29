@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useCreatives, type CreateRequest } from "@/lib/client/useCreatives";
-import type { StudioData } from "@/lib/studio";
+import type { Creative, Objective, StudioData } from "@/lib/studio";
 import type { ApiError } from "@/lib/types";
 import { BrandStep } from "./BrandStep";
 import { CreateStep } from "./CreateStep";
 import { ExportStep } from "./ExportStep";
 import { ProductStep } from "./ProductStep";
-import { ReviewStep } from "./ReviewStep";
+import { ReviewStep, defaultCopy } from "./ReviewStep";
 
 const STEPS = ["Brand", "Product", "Create", "Review", "Export"] as const;
 const CREATE_STEP = 2;
@@ -53,8 +53,8 @@ export function Studio() {
   const canAdvance = step < STEPS.length - 1 && unlocked[step + 1];
   const approvedCreatives = studio.creatives.filter((creative) => studio.approved.has(creative.id) && creative.outputUrl);
 
-  const create = async (requests: CreateRequest[]): Promise<void> => {
-    await studio.create(requests);
+  const create = async (requests: CreateRequest[], objective: Objective): Promise<void> => {
+    await studio.create(requests, objective);
     setStep(REVIEW_STEP);
   };
 
@@ -107,8 +107,25 @@ export function Studio() {
               onCreate={create}
             />
           )}
-          {step === REVIEW_STEP && <ReviewStep creatives={studio.creatives} approved={studio.approved} onToggleApproved={studio.toggleApproved} onRemove={studio.remove} />}
-          {step === 4 && <ExportStep creatives={approvedCreatives} />}
+          {step === REVIEW_STEP && (
+            <ReviewStep
+              creatives={studio.creatives}
+              approved={studio.approved}
+              copy={studio.copy}
+              copyLines={data.copyLines}
+              safety={data.safety}
+              onCopyChange={studio.setCopy}
+              onToggleApproved={studio.toggleApproved}
+              onRemove={studio.remove}
+            />
+          )}
+          {step === 4 && (
+            <ExportStep
+              creatives={approvedCreatives}
+              copyFor={(creative: Creative) => studio.copy[creative.id] ?? defaultCopy(creative, data.copyLines)}
+              safety={data.safety}
+            />
+          )}
 
           <div className="step-actions">
             {step > 0 && (

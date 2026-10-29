@@ -1,0 +1,10 @@
+{
+  "note": "Copy-line templates for the Create step, picked by objective. Deterministic: no language model writes these. One sales line carries a performance claim on purpose, so the claims guard has something real to flag.",
+  "lines": {
+    "awareness": ["Strength, crafted in chocolate.", "Dark chocolate, coffee and 5 g creatine. One quiet ritual."],
+    "sales": ["Boosts performance. Tastes like dessert.", "Coffee, creatine, 70% dark. One bar a day."],
+    "traffic": ["Meet the bar behind the ritual.", "See how Tauvel is made."],
+    "leads": ["First box on us. Tell us your ritual.", "Join the Tauvel list for first pours and new bars."],
+    "engagement": ["Coffee first, or chocolate first?", "Your morning ritual, in a bar."]
+  }
+}

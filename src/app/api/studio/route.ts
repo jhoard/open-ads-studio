@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { RECIPES } from "@/lib/recipes";
-import { loadBrand, loadProduct, protectMaskPath } from "@/lib/server/catalog";
+import { loadBrand, loadBrandSafety, loadCopyLines, loadProduct, protectMaskPath } from "@/lib/server/catalog";
 import { GENERATION_MODE } from "@/lib/server/config";
 import type { StudioData } from "@/lib/studio";
 import type { ApiError } from "@/lib/types";
@@ -19,7 +19,7 @@ async function protectedShare(maskPath: string): Promise<number> {
 
 export async function GET(): Promise<NextResponse<StudioData | ApiError>> {
   try {
-    const [brand, product] = await Promise.all([loadBrand(), loadProduct()]);
+    const [brand, product, safety, copyLines] = await Promise.all([loadBrand(), loadProduct(), loadBrandSafety(), loadCopyLines()]);
     const share = product.protectMask ? await protectedShare(protectMaskPath(product)) : null;
     return NextResponse.json({
       mode: GENERATION_MODE,
@@ -33,6 +33,8 @@ export async function GET(): Promise<NextResponse<StudioData | ApiError>> {
         reveal: product.reveal ? { startUrl: assetUrl(product.reveal.start), endUrl: assetUrl(product.reveal.end) } : null,
       },
       recipes: RECIPES,
+      safety,
+      copyLines,
     });
   } catch (error: unknown) {
     console.error("studio load failed", error);
