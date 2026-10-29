@@ -5,7 +5,7 @@ Product photo + brand URL in. On-brand ad stills and short video with audio out.
 
 ## Deadline and deliverables
 
-- Submission due: Thu Oct 30, 2026, 9:00am PT. Internal target: Thu Oct 29, 10:00pm PT. Friday morning does not exist.
+- Submission due: Fri Oct 30, 2026, 9:00am PT. Internal target: Thu Oct 29, 10:00pm PT. Friday morning does not exist.
 - Deliverables (all four):
   1. Public GitHub repo: app code, `/workflows/*.json`, OSS license, run-locally steps anyone can follow
   2. Demo video, 2:00 max. Must name ComfyUI, LTX-2, MiniMax H3, and the image model on camera

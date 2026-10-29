@@ -1,7 +1,7 @@
 # Open Ads Studio: Playbook
 
 Comfy "Open Source Higgsfield" build night, SF. Solo build by James Hoard.
-Submission due Thu Oct 30, 9:00am PT. Internal target: submitted by Thu Oct 29, 10:00pm PT.
+Submission due Fri Oct 30, 9:00am PT. Internal target: submitted by Thu Oct 29, 10:00pm PT.
 
 ## 1. Thesis
 
@@ -168,7 +168,8 @@ Never cut: Protect + label match, claims guard + disclosure badge, workflow JSON
 ## 14. Pending tweaks
 
 - Topography: stronger chocolate + contour-strata wording, broad foreground plateau instead of "rim", harmonize at 0.5 with sun side named.
-- Molten: end strength 0.6 to 0.7 and more frames so the wave builds over ~2s; add a pool reflection under the pack so it doesn't hover.
+- Molten: cut. Cut-and-drop compositing can't integrate with liquid.
+- Still test (relight in place): Qwen-Image-Edit takes `packshot-v1-green.png` itself as the input and rebuilds the background (dark slate, hard beam from the left, espresso cup, reflection under the pack). Then `src/lib/server/glyph-paste.ts` detects the box (green-pixel bounds, then gradient NCC over independent x and y scales and shift) and pastes back only the `packshot-v1-protect.png` glyphs. Script: `scripts/run-relight.ts`. First run (seed 7): Qwen reframes the shot (box at about 0.68x, slightly squashed), so "stays in place" does not hold, but detection registers it (NCC 0.62 on the 4-step run) and the pasted label is clean. Pending James's pass or fail on `var/relight/s7/fast-2-final.png`. On a fail, go studio-only and start M3.
 - H3 transients at 1.8s/2.9s: pending
 - Live link: rate limit or demo mode by default before the link goes public.
 - Page copy promises native audio from LTX; fix when the M3 flow replaces it.

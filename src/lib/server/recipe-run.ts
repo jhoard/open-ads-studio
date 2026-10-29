@@ -10,7 +10,7 @@ import { analyzeSet, type SetAnalysis } from "./set-analysis";
 
 const POLL_INTERVAL_MS = 4000;
 
-async function runPass(runId: string, stage: StageName, label: string, params: StageParams): Promise<StageJob> {
+export async function runPass(runId: string, stage: StageName, label: string, params: StageParams): Promise<StageJob> {
   let job = await createJob({ id: randomUUID(), stage, runId, label, idempotencyKey: randomUUID(), params });
   const deadline = Date.now() + WAIT_TIMEOUT_SECONDS * 1000;
   while (!TERMINAL_STATUSES.includes(job.status)) {
