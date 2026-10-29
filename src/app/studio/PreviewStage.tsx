@@ -78,6 +78,7 @@ export function PreviewStage({ media, title, detail, reveal, revealKey, overlay,
 
   return (
     <section className="preview" aria-label="Preview">
+      <div className="preview-toolbar"><span>{custom ? "Brand preview" : "Creative preview"}</span><span>{custom ? "Updates as you edit" : "Preview before exporting"}</span></div>
       <div className="preview-frame">
         {custom ??
           (media ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { BrandKit } from "@/lib/brand-kit";
 import { useCreatives, type CreateRequest } from "@/lib/client/useCreatives";
 import { DIRECTION_EXAMPLES } from "@/lib/directions";
@@ -15,7 +15,6 @@ import { ExportStep } from "./ExportStep";
 import { PreviewStage, type LabelReveal, type PreviewMedia } from "./PreviewStage";
 import { ProductStep } from "./ProductStep";
 import { ReviewStep, defaultCopy } from "./ReviewStep";
-import { StepIcon } from "./icons";
 
 const STEPS = [
   { id: "brand", name: "Brand" },
@@ -56,6 +55,8 @@ export function Studio() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showModel, setShowModel] = useState(false);
   const studio = useCreatives();
+  const controlsRef = useRef<HTMLElement>(null);
+  const previousStep = useRef(step);
 
   useEffect(() => {
     fetch("/api/studio", { cache: "no-store" })
@@ -72,6 +73,12 @@ export function Studio() {
   }, []);
 
   useEffect(() => {
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    controlsRef.current?.scrollTo({ top: 0 });
+    const heading = controlsRef.current?.querySelector("h1");
+    heading?.setAttribute("tabindex", "-1");
+    heading?.focus({ preventScroll: true });
     window.scrollTo({ top: 0 });
   }, [step]);
 
@@ -104,7 +111,7 @@ export function Studio() {
 
   const preview = useMemo((): Preview | null => {
     if (!data || !brand) return null;
-    if (step === BRAND) return { media: null, title: brand.name, detail: brand.tone || brand.website || undefined };
+    if (step === BRAND) return { media: null, title: brand.name, detail: "Your brand kit. Preview updates as you edit." };
     if (step === PRODUCT) {
       const share = data.product.protectedShare === null ? "" : `${(data.product.protectedShare * 100).toFixed(1)}% of the photo is protected`;
       return { media: { kind: "image", url: data.product.photoUrl }, title: data.product.name, detail: share };
@@ -139,30 +146,42 @@ export function Studio() {
 
   return (
     <div className="shell">
-      <nav className="rail" aria-label="Steps">
+      <a className="skip-link" href="#studio-editor">Skip to editor</a>
+      <nav className="rail" aria-label="Creative workflow">
         <p className="rail-mark" aria-label="Open Ads Studio">
-          <span>Open Ads</span>
-          <span>Studio</span>
+          <span>Open Ads Studio</span>
+          <span className="rail-subtitle">Creative workspace</span>
         </p>
         <ol>
           {STEPS.map((entry, index) => (
             <li key={entry.id}>
-              <button type="button" disabled={!unlocked[index]} aria-current={index === step ? "step" : undefined} data-done={index < step} onClick={() => setStep(index)}>
-                <StepIcon name={entry.id} />
-                <span>{entry.name}</span>
+              <button
+                type="button"
+                aria-disabled={!unlocked[index]}
+                aria-current={index === step ? "step" : undefined}
+                aria-describedby={!unlocked[index] ? `step-${entry.id}-reason` : undefined}
+                onClick={() => { if (unlocked[index]) setStep(index); }}
+              >
+                <span className="step-number" aria-hidden="true">{index + 1}</span>
+                <span className="step-name">{entry.name}</span>
+                <span className="visually-hidden">{index === step ? ", current step" : !unlocked[index] ? ", unavailable" : ""}</span>
               </button>
+              {!unlocked[index] && <span id={`step-${entry.id}-reason`} className="visually-hidden">
+                {index === CREATE ? "Confirm product protection in Product first." : index === REVIEW ? "Create a creative first." : "Approve a creative in Review first."}
+              </span>}
             </li>
           ))}
         </ol>
       </nav>
 
-      <main className="controls">
+      <main className="controls" id="studio-editor" ref={controlsRef} tabIndex={-1}>
+        <div className="workspace-context"><span>Step {step + 1} of {STEPS.length}</span><span>Brand to ad creative</span></div>
         {data && (
           <p className="mode-pill" data-mode={data.mode}>
-            {data.mode === "demo" ? "Demo mode: example renders, no generation" : "Live on Comfy Cloud"}
+            {data.mode === "demo" ? "Demo workspace: explore example renders" : "Live workspace: generation enabled"}
           </p>
         )}
-        {loadError && <p className="notice notice-error">{loadError}</p>}
+        {loadError && <p className="notice notice-error" role="alert">{loadError}</p>}
         {data && brand ? (
           <>
             {step === BRAND && <BrandStep kit={brand} catalog={data.directionCatalog} onKit={setBrand} />}
@@ -206,6 +225,10 @@ export function Studio() {
             )}
 
             <div className="step-nav">
+              <p className="step-nav-hint">
+                {step === BRAND ? "Review your kit, then add your product." : step === PRODUCT && !protectConfirmed ? "Confirm product protection to continue." : step === REVIEW && studio.approved.size === 0 ? "Approve a creative to unlock exports." : `Step ${step + 1} of ${STEPS.length}`}
+              </p>
+              <div className="step-nav-buttons">
               {step > 0 && (
                 <button className="button button-secondary" type="button" onClick={() => setStep(step - 1)}>
                   Back
@@ -213,13 +236,14 @@ export function Studio() {
               )}
               {step < STEPS.length - 1 && step !== CREATE && (
                 <button className="button" type="button" disabled={!unlocked[step + 1]} onClick={() => setStep(step + 1)}>
-                  Next: {STEPS[step + 1].name}
+                  Continue to {STEPS[step + 1].name}
                 </button>
               )}
+              </div>
             </div>
           </>
         ) : (
-          !loadError && <p className="empty">Loading the studio</p>
+          !loadError && <p className="empty" role="status">Loading the studio...</p>
         )}
       </main>
 

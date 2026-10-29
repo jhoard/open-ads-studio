@@ -90,14 +90,23 @@ export function RecipeCard({ card, recipe, selected, disabledReason, onToggle, o
       <div className="recipe-footer">
         {card.variants.length > 1 && (
           <div className="segmented" role="radiogroup" aria-label={`${card.label} mode`}>
-            {card.variants.map((variant) => (
+            {card.variants.map((variant, index) => (
               <button
                 key={variant.recipe}
                 type="button"
                 role="radio"
                 aria-checked={variant.recipe === recipe.id}
                 disabled={disabled}
+                tabIndex={variant.recipe === recipe.id ? 0 : -1}
                 onClick={() => onVariant(variant.recipe)}
+                onKeyDown={(event) => {
+                  const offset = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0;
+                  if (!offset && event.key !== "Home" && event.key !== "End") return;
+                  event.preventDefault();
+                  const next = event.key === "Home" ? 0 : event.key === "End" ? card.variants.length - 1 : (index + offset + card.variants.length) % card.variants.length;
+                  onVariant(card.variants[next].recipe);
+                  event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus();
+                }}
               >
                 {variant.label}
               </button>

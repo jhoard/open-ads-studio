@@ -28,31 +28,38 @@ function Mark({ kit }: { kit: BrandKit }) {
 export function BrandPreview({ kit }: { kit: BrandKit }) {
   const scope = { "--kit-surface": kit.theme.surface, "--kit-accent": kit.theme.accent, "--kit-font": kitFont(kit) } as CSSProperties;
   return (
-    <div className="brand-lockup" style={scope}>
-      <Mark kit={kit} />
-      {kit.tagline && <p className="brand-lockup-tagline">{kit.tagline}</p>}
-      <ul className="brand-lockup-palette" aria-label="Palette">
+    <div className="brand-preview-content">
+      <div className="brand-lockup" style={scope}>
+        <Mark kit={kit} />
+        {kit.tagline && <p className="brand-lockup-tagline">{kit.tagline}</p>}
+        <div className="brand-specimen" aria-label="Type specimen">
+          <span className="brand-specimen-glyphs" aria-hidden="true">
+            Aa Bb 123
+          </span>
+          <span className="brand-specimen-note">
+            Display: {kit.typography.display}. Supporting: {kit.typography.supporting}.
+          </span>
+        </div>
+        {kit.heroImages.length > 0 && (
+          <ul className="brand-lockup-heroes" aria-label="Hero images from the site">
+            {kit.heroImages.map((src) => (
+              <li key={src}>
+                <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="palette-heading"><h2>Brand palette</h2><span>{kit.palette.length} colors</span></div>
+      <ul className="brand-color-list" aria-label="Brand palette">
         {kit.palette.map((color) => (
-          <li key={`${color.token}-${color.hex}`} style={{ background: color.hex }} title={`${color.token} ${color.hex}`} />
+          <li key={`${color.token}-${color.hex}`}>
+            <span className="color-swatch" style={{ background: color.hex }} aria-hidden="true" />
+            <span className="color-token">{color.token.replace(/-/g, " ")}</span>
+            <span className="color-hex">{color.hex}</span>
+          </li>
         ))}
       </ul>
-      <div className="brand-specimen" aria-label="Type specimen">
-        <span className="brand-specimen-glyphs" aria-hidden="true">
-          Aa Bb 123
-        </span>
-        <span className="brand-specimen-note">
-          Display: {kit.typography.display}. Supporting: {kit.typography.supporting}.
-        </span>
-      </div>
-      {kit.heroImages.length > 0 && (
-        <ul className="brand-lockup-heroes" aria-label="Hero images from the site">
-          {kit.heroImages.map((src) => (
-            <li key={src}>
-              <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" />
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }
