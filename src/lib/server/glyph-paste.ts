@@ -196,7 +196,7 @@ const STRIP_HOLD_SHARE = 0.6; // full softening for this share of the strip dept
 
 // libvips morphology treats white as background here: erode grows a white-on-black mask (measured:
 // 31,107 px to 60,256 at radius 6, while dilate shrinks it to 4,217).
-const growMask = (input: Sharp, radius: number): Sharp => input.erode(radius);
+const growMask = (input: Sharp, radius: number): Sharp => (radius > 0 ? input.erode(radius) : input);
 
 const luma = (rgb: Buffer, i: number): number => 0.2126 * rgb[i * 3] + 0.7152 * rgb[i * 3 + 1] + 0.0722 * rgb[i * 3 + 2];
 
@@ -242,7 +242,7 @@ function smoothFloat(data: Float32Array, canvas: Canvas, sigma: number): Float32
 }
 
 /** Per-pixel brightness ratio of the edit's box face to the packshot's, from glyph-free face pixels only. */
-function toneRatio(edited: Buffer, packshot: Buffer, face: Buffer, canvas: Canvas): Float32Array {
+function toneRatio(edited: Buffer, packshot: Buffer, face: Buffer, canvas: Canvas, sigma: number): Float32Array {
   const n = canvas.width * canvas.height;
   const editedFace = new Float32Array(n);
   const packshotFace = new Float32Array(n);
@@ -255,8 +255,8 @@ function toneRatio(edited: Buffer, packshot: Buffer, face: Buffer, canvas: Canva
     packshotSum += packshotFace[i];
   }
   // Normalized convolution: same weights on both sides, so the ratio of the blurs is a local ratio.
-  const e = smoothFloat(editedFace, canvas, TONE_SIGMA);
-  const p = smoothFloat(packshotFace, canvas, TONE_SIGMA);
+  const e = smoothFloat(editedFace, canvas, sigma);
+  const p = smoothFloat(packshotFace, canvas, sigma);
   const fallback = packshotSum > 0 ? editedSum / packshotSum : 1;
   const ratio = new Float32Array(n);
   for (let i = 0; i < n; i++) {
@@ -274,7 +274,14 @@ export interface PasteResult {
 }
 
 /** Composite the aligned, tone-matched glyphs onto the edit, plus their fading reflection under the base. */
-export async function pasteGlyphs(packshotPath: string, editedPath: string, maskPath: string, align: Alignment, outputPath: string): Promise<PasteResult> {
+export interface PasteOptions {
+  /** Tone-match blur; smaller follows a moving light edge more tightly. */
+  toneSigma?: number;
+  /** Extra px pasted around the glyphs to hide a misregistered model copy; 0 pastes the mask alone. */
+  pasteBand?: number;
+}
+
+export async function pasteGlyphs(packshotPath: string, editedPath: string, maskPath: string, align: Alignment, outputPath: string, options: PasteOptions = {}): Promise<PasteResult> {
   const meta = await sharp(packshotPath).metadata();
   const size = { width: meta.width as number, height: meta.height as number };
   const { data: edited, info } = await sharp(editedPath).removeAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -290,14 +297,14 @@ export async function pasteGlyphs(packshotPath: string, editedPath: string, mask
   };
   const [glyphs, alpha, guard, core] = await Promise.all([
     placeOnCanvas(sharp(packshotPath).removeAlpha().toColourspace("srgb"), align, size, canvas, 3),
-    placeOnCanvas(growMask(sharp(maskPath).greyscale(), PASTE_BAND).blur(PASTE_FEATHER), align, size, canvas, 1),
+    placeOnCanvas(growMask(sharp(maskPath).greyscale(), options.pasteBand ?? PASTE_BAND).blur(PASTE_FEATHER), align, size, canvas, 1),
     placeOnCanvas(growMask(sharp(maskPath).greyscale(), FACE_GLYPH_GUARD), align, size, canvas, 1),
     placeOnCanvas(sharp(maskPath).greyscale(), align, size, canvas, 1),
   ]);
 
   const face = Buffer.alloc(n);
   for (let y = box.y0; y < box.base; y++) for (let x = box.x0; x <= box.x1; x++) face[y * canvas.width + x] = guard[y * canvas.width + x] < 16 ? 1 : 0;
-  const ratio = toneRatio(edited, glyphs, face, canvas);
+  const ratio = toneRatio(edited, glyphs, face, canvas, options.toneSigma ?? TONE_SIGMA);
 
   // Soften the reflection strip first so the model's own mirrored text disappears.
   const depth = Math.round((box.base - box.y0) * REFLECTION_DEPTH_SHARE);
@@ -347,3 +354,4 @@ export async function pasteGlyphs(packshotPath: string, editedPath: string, mask
     modelLabelMatch: labelMatch(source, lumaPlane(edited, canvas.width, canvas.height), core),
   };
 }
+
