@@ -1,6 +1,6 @@
 // README figure: the model-alone Scene render next to the restored one, each with a label close-up.
 // Usage: npx tsx scripts/build-label-figure.ts
-import sharp from "sharp";
+import sharp, { type OverlayOptions } from "sharp";
 import { DIRECTION_EXAMPLES } from "../src/lib/directions";
 import { textBlock } from "../src/lib/server/text-paths";
 
@@ -18,7 +18,7 @@ const BACKGROUND = "#0f0f0e";
 const INK = "#ece9e2";
 const MUTED = "#a8a49b";
 
-async function column(file: string): Promise<sharp.OverlayOptions[]> {
+async function column(file: string): Promise<OverlayOptions[]> {
   const full = await sharp(file).resize(FULL_WIDTH, FULL_HEIGHT).png().toBuffer();
   const crop = await sharp(file).extract(CROP).resize(CROP_WIDTH, CROP_HEIGHT).png().toBuffer();
   return [{ input: full }, { input: crop }];
