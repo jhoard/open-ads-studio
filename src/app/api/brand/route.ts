@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { BrandKit } from "@/lib/brand-kit";
-import { CrawlInputError, cachedKit, crawlBrand } from "@/lib/server/brand-extract";
+import { CrawlInputError, crawlBrand } from "@/lib/server/brand-extract";
+import { cachedKit } from "@/lib/server/cached-kit";
 import { loadBrand } from "@/lib/server/catalog";
 import type { ApiError } from "@/lib/types";
 

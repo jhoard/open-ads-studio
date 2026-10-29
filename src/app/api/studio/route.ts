@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { RECIPES } from "@/lib/recipes";
 import { loadBrand, loadBrandSafety, loadCopyLines, loadProduct, protectMaskPath } from "@/lib/server/catalog";
-import { cachedKit } from "@/lib/server/brand-extract";
+import { cachedKit } from "@/lib/server/cached-kit";
 import { GENERATION_MODE } from "@/lib/server/config";
 import type { StudioData } from "@/lib/studio";
 import type { ApiError } from "@/lib/types";

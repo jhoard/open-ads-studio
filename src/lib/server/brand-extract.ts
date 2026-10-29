@@ -1,11 +1,9 @@
 import { lookup } from "node:dns/promises";
-import { readFile } from "node:fs/promises";
 import { BlockList, isIP } from "node:net";
-import path from "node:path";
 import { chromium, type Browser, type BrowserContext } from "playwright-core";
 import { extractDesign, type ExtractedDesign } from "../../../packages/design-extract/src/extractor.js";
 import { deriveDirectionIds, directionsFor, namePalette, pickTheme, type BrandKit } from "@/lib/brand-kit";
-import type { Brand, SceneDirection } from "@/lib/types";
+import type { SceneDirection } from "@/lib/types";
 
 // Brand from URL: the vendored Design Extractor, run in local Playwright or serverless Chromium.
 
@@ -212,19 +210,4 @@ export async function crawlBrand(raw: string, catalog: SceneDirection[]): Promis
   );
   await guard.assertClean();
   return toKit(data, markdown, site.url, catalog);
-}
-
-/** The preloaded Tauvel kit, with its cached DESIGN.md. */
-export async function cachedKit(brand: Brand, logoUrl: string): Promise<BrandKit> {
-  const designMd = await readFile(path.join(process.cwd(), "assets", "tauvel", "DESIGN.md"), "utf8");
-  const hex = (token: string): string | undefined => brand.palette.find((color) => color.token === token)?.hex;
-  return {
-    ...brand,
-    logoUrl,
-    logoKind: "mask",
-    heroImages: [],
-    theme: { surface: hex("bottle-green") ?? brand.palette[0].hex, accent: hex("brushed-gold") ?? brand.palette[1].hex },
-    source: "cached",
-    designMd,
-  };
 }
