@@ -79,16 +79,25 @@ Outputs land in `var/` (git-ignored).
 
 ## Workflows
 
-| File | What it does |
-|---|---|
-| `workflows/cutout.json` | BiRefNet background removal |
-| `workflows/scene-set.json` | Qwen-Image-Edit 2509 renders an art-directed set with no product in it |
-| `workflows/scene-edit.json` | Qwen-Image-Edit 2509 edits a set at the same size (for example, adding the frozen wave) |
-| `workflows/scene-composite.json` | Cutout, placement, contact and cast shadow, low-denoise harmonize, protected-glyph paste |
-| `workflows/vfx-ltx-reveal.json` | LTX-2 first and last keyframe video with the protected paste on every frame |
-| `workflows/hero-h3.json` | MiniMax H3 first and last keyframe video with native audio |
-| `workflows/vfx-ltx.json` | LTX-2 single image to video (quick clip) |
-| `workflows/scene.json` | Single-pass catalog still (superseded by the recipes) |
+API-format files in `/workflows` are what the app submits. The four the recipes use also ship in UI format in [`workflows/ui/`](workflows/ui): drag one onto a ComfyUI canvas and it loads laid out left to right in labeled groups, with the same nodes and values (checked by round-tripping each through the ComfyUI frontend's own `graphToPrompt`).
+
+| File | What it does | UI version |
+|---|---|---|
+| `workflows/cutout.json` | BiRefNet background removal | [`ui/cutout.json`](workflows/ui/cutout.json), [screenshot](docs/img/workflow-cutout.png) |
+| `workflows/scene-edit.json` | Scene: Qwen-Image-Edit 2509 relights the packshot in place on an art-directed set (glyph paste follows in app code) | [`ui/scene-edit.json`](workflows/ui/scene-edit.json), [screenshot](docs/img/workflow-scene-edit.png) |
+| `workflows/vfx-ltx-reveal.json` | Reveal (Draft): LTX-2 first and last keyframe video with the protected paste on every frame | [`ui/vfx-ltx-reveal.json`](workflows/ui/vfx-ltx-reveal.json), [screenshot](docs/img/workflow-vfx-ltx-reveal.png) |
+| `workflows/hero-h3.json` | Reveal (Final) and Cinemagraph: MiniMax H3 first and last keyframe video with native audio | [`ui/hero-h3.json`](workflows/ui/hero-h3.json), [screenshot](docs/img/workflow-hero-h3.png) |
+| `workflows/scene-set.json` | Qwen-Image-Edit 2509 renders an art-directed set with no product in it (earlier recipe) | |
+| `workflows/scene-composite.json` | Cutout, placement, contact and cast shadow, low-denoise harmonize, protected-glyph paste (retired for relight in place) | |
+| `workflows/vfx-ltx.json` | LTX-2 single image to video (quick clip) | |
+| `workflows/scene.json` | Single-pass catalog still (superseded by the recipes) | |
+
+Prompts, seeds, sizes and input filenames in the files are defaults; the app sets them per run (see `src/lib/server/prompts.ts`). In the UI versions, load your own images into the LoadImage nodes.
+
+![cutout.json in ComfyUI](docs/img/workflow-cutout.png)
+![scene-edit.json in ComfyUI](docs/img/workflow-scene-edit.png)
+![vfx-ltx-reveal.json in ComfyUI](docs/img/workflow-vfx-ltx-reveal.png)
+![hero-h3.json in ComfyUI](docs/img/workflow-hero-h3.png)
 
 Several were converted from the official Comfy templates with `scripts/ui-to-api.ts`, which flattens UI-format workflows (including subgraphs) into the API format the SDK submits.
 
