@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+.next/
+.vercel/
+out/
+var/
+models/
+*.safetensors
+*.log
+.DS_Store
+*.tsbuildinfo
