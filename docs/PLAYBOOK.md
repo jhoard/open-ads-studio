@@ -75,8 +75,8 @@ Fallback for judges: if the live key is out of credits, the deployed app serves 
 | # | Scope | Target (PT) | Status |
 |---|---|---|---|
 | M0 | One Cloud call, image in, video out, displayed and downloadable | Wed 5:30pm | Done |
-| M1 | Cutout, scene stills (option B composite), LTX reveal, post step | Wed 9pm | In progress (reveal done) |
-| M2 | MiniMax H3 reveal with native audio, side by side with LTX; H3 hero clip | Wed 11:59pm | Next |
+| M1 | Cutout, scene stills (option B composite), LTX reveal, post step | Wed 9pm | Done (commit f22715f): 3 label-exact scenes in 20s, LTX reveal end strength 0.9 tested, post-vfx.ts |
+| M2 | MiniMax H3 reveal with native audio, side by side with LTX; H3 hero clip | Wed 11:59pm | In progress: H3 reveal + side by side done (c5c9edb), audio transients need a listen; hero clip next |
 | M3 | Brand step: cached Tauvel kit, URL field wired to Extractor | Thu 10am | |
 | M3.5 | Protect step, label-match score, recipe picker | Thu 12pm | |
 | M4 | Review grid, claims guard, export sizes, end card, disclosure badge | Thu 3pm | |

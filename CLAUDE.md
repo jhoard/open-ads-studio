@@ -64,3 +64,4 @@ Model allowlist:
 - Prefer boring, working code over clever code. Polish goes into the UI, not the architecture.
 - Commit small and often. Conventional commit messages.
 - Start with `/plan-build` to produce PLAN.md, then get approval before writing app code.
+- Plan of record: `docs/PLAYBOOK.md` (supersedes PLAN.md for milestones, cut list and pipeline rules). Update the Status column in its section 5 whenever a milestone lands.
