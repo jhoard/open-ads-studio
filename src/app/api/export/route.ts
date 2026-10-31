@@ -10,7 +10,7 @@ import { DIRECTION_EXAMPLES } from "@/lib/directions";
 import { RECIPES, findRecipe } from "@/lib/recipes";
 import { loadBrand, loadBrandSafety } from "@/lib/server/catalog";
 import { renderClip, renderStill } from "@/lib/server/export-render";
-import { findJob, outputPath } from "@/lib/server/jobs";
+import { findJob, localOutput } from "@/lib/server/jobs";
 import { STAGE_MODELS, buildProvenance } from "@/lib/server/provenance";
 import type { ApiError, StageName } from "@/lib/types";
 
@@ -60,7 +60,7 @@ async function resolveSource(body: ExportBody): Promise<Source | string> {
   const job = await findJob(body.creativeId);
   if (!job || job.status !== "succeeded" || !job.outputFile || !job.outputKind) return "That creative is not ready to export.";
   return {
-    file: outputPath(job.outputFile),
+    file: await localOutput(job.outputFile),
     kind: job.outputKind,
     stage: job.stage,
     label: job.label,

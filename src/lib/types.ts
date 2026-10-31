@@ -6,7 +6,7 @@
  * scene-relight: the Scene recipe. Qwen relights the packshot in place, then the box is detected and
  * only the protected glyphs are pasted back (tone-matched, plus their reflection).
  */
-export type StageName = "scene" | "scene-set" | "scene-edit" | "scene-composite" | "scene-relight" | "vfx-ltx" | "vfx-reveal" | "hero-h3";
+export type StageName = "scene" | "scene-set" | "scene-edit" | "scene-composite" | "scene-relight" | "vfx-ltx" | "vfx-reveal" | "hero-h3" | "cutout";
 
 export const ASPECT_RATIOS = ["9:16", "1:1", "16:9", "3:4"] as const;
 export type AspectRatio = (typeof ASPECT_RATIOS)[number];
@@ -106,6 +106,12 @@ export const TERMINAL_STATUSES: readonly JobStatus[] = ["succeeded", "canceled",
 
 export type OutputKind = "image" | "video";
 
+/** A file the server can read: a path inside the deployment (bundled assets) or "store:<key>" for stored files. */
+export type FileRef = string;
+
+/** How the packshot is placed on a render: by Tauvel's green box, by cutout silhouettes, or both with the better kept. */
+export type AlignMode = "green-box" | "silhouette" | "best";
+
 export interface StageJob {
   id: string;
   idempotencyKey: string;
@@ -124,10 +130,21 @@ export interface StageJob {
   outputKind: OutputKind | null;
   /** Secondary outputs by name, for example the placed protect mask of a composite. */
   extraFiles?: Record<string, string>;
-  /** Post-step inputs for scene-relight: the source packshot and its protect mask (server paths). */
-  glyphPaste?: { packshotPath: string; protectMaskPath: string };
+  /**
+   * Post-step inputs for scene-relight. Each value is a FileRef. "green-box" finds Tauvel's pack by color;
+   * "silhouette" cuts the product out of the render (BiRefNet) and fits the packshot's own cutout to it.
+   */
+  glyphPaste?: { packshotPath: FileRef; protectMaskPath: FileRef; align?: AlignMode; packshotCutout?: FileRef };
   /** Post-step inputs for a cinemagraph: the Scene still it animates, and the packshot and mask behind its label. */
-  clipPaste?: { stillPath: string; packshotPath: string; protectMaskPath: string };
+  clipPaste?: { stillPath: FileRef; packshotPath: FileRef; protectMaskPath: FileRef; alignment?: { scaleX: number; scaleY: number; dx: number; dy: number; score: number }; reflection?: boolean };
+  /** The packshot-to-render fit a Scene's paste used, so a Cinemagraph of it reuses the same placement. */
+  alignment?: { scaleX: number; scaleY: number; dx: number; dy: number; score: number };
+  /** In-progress post-step: the render's cutout job (silhouette alignment), and who is finishing the job. */
+  post?: { cutoutJobId?: string; packshotCutoutJobId?: string; rawFile?: string; claimedAt?: string };
+  /** "best" runs: the label match each placement reached, so the comparison is on record. */
+  alignmentScores?: { greenBox: number; silhouette: number | null };
+  /** The visitor who started the job, for per-visitor history. */
+  visitor?: string;
   /** Label match after the glyph paste, and of the model's own output, 0 to 1. */
   labelMatch?: { final: number; model: number | null };
   createdAt: string;

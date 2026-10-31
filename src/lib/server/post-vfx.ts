@@ -1,12 +1,11 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { ffmpegPath, ffprobePath } from "./binaries";
 
 // Deterministic post on a generated clip: hold the first and last frames, then an eased push-in.
 // No generative model is involved; this is plain ffmpeg.
 
 const run = promisify(execFile);
-const ffmpeg = (): string => process.env.FFMPEG_PATH ?? "ffmpeg";
-const ffprobe = (): string => process.env.FFPROBE_PATH ?? "ffprobe";
 
 // Zoom is rendered at 2x then downscaled, so each frame's zoom step lands on a quarter pixel instead of stuttering.
 const SUPERSAMPLE = 2;
@@ -30,7 +29,7 @@ interface ClipInfo {
 }
 
 async function probe(input: string): Promise<ClipInfo> {
-  const { stdout } = await run(ffprobe(), ["-v", "error", "-show_entries", "stream=codec_type,width,height,r_frame_rate,nb_frames", "-of", "json", input]);
+  const { stdout } = await run(await ffprobePath(), ["-v", "error", "-show_entries", "stream=codec_type,width,height,r_frame_rate,nb_frames", "-of", "json", input]);
   const streams = (JSON.parse(stdout) as { streams: { codec_type: string; width?: number; height?: number; r_frame_rate?: string; nb_frames?: string }[] }).streams;
   const video = streams.find((stream) => stream.codec_type === "video");
   if (!video?.width || !video.height || !video.r_frame_rate || !video.nb_frames) throw new Error(`No video stream in ${input}`);
@@ -66,5 +65,5 @@ export async function postVfx(input: string, output: string, options: PostVfxOpt
     args.push("-af", `adelay=${delayMs}:all=1,apad`, "-shortest", "-c:a", "aac", "-b:a", "192k");
   }
   args.push("-movflags", "+faststart", output);
-  await run(ffmpeg(), args);
+  await run(await ffmpegPath(), args);
 }

@@ -192,6 +192,11 @@ const bindHero: Binder = async (workflow, client, { imagePath, endImagePath, pas
   await bindHeroPaste(workflow, size, endImagePath, pasteRect);
 };
 
+// BiRefNet background removal: RGBA out, the product's silhouette in the alpha.
+const bindCutout: Binder = async (workflow, client, params) => {
+  workflow.setInput("1", "image", client.assets.fromFile(params.imagePath));
+};
+
 const STAGES: Record<StageName, StageSpec> = {
   scene: { file: "scene.json", bind: bindScene, outputNode: "469" },
   "scene-set": { file: "scene-set.json", bind: bindSceneSet, outputNode: "469" },
@@ -201,6 +206,7 @@ const STAGES: Record<StageName, StageSpec> = {
   "vfx-ltx": { file: "vfx-ltx.json", bind: bindVfxSingle, outputNode: "75" },
   "vfx-reveal": { file: "vfx-ltx-reveal.json", bind: bindVfxReveal, outputNode: "75" },
   "hero-h3": { file: "hero-h3.json", bind: bindHero, outputNode: "92" },
+  cutout: { file: "cutout.json", bind: bindCutout, outputNode: "3" },
 };
 
 export function stageOutputs(stage: StageName): Pick<StageSpec, "outputNode" | "extraOutputs"> {

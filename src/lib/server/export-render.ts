@@ -6,6 +6,7 @@ import sharp from "sharp";
 import { exportLayout, type Box, type ExportLayout, type ExportSize } from "@/lib/export-layout";
 import type { Brand } from "@/lib/types";
 import { textBlock } from "./text-paths";
+import { ffmpegPath, ffprobePath } from "./binaries";
 
 // Deterministic export renders: the creative cover-fitted into an ad layout, the copy line,
 // the logo, and the AI-disclosure badge. No model runs here.
@@ -101,11 +102,11 @@ async function endCardPng(size: ExportSize, brand: Brand): Promise<Buffer> {
 }
 
 async function hasAudio(file: string): Promise<boolean> {
-  const { stdout } = await run("ffprobe", ["-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", file]);
+  const { stdout } = await run(await ffprobePath(), ["-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", file]);
   return stdout.trim().length > 0;
 }
 
-/** Clip export: the creative in the layout, then the logo end card. Needs ffmpeg on the PATH. */
+/** Clip export: the creative in the layout, then the logo end card. */
 export async function renderClip(sourcePath: string, size: ExportSize, brand: Brand, copy: string, disclosure: Disclosure, outputPath: string, workDir: string): Promise<void> {
   const layout = exportLayout(size);
   const overlay = path.join(workDir, `overlay-${size.replace(":", "x")}.png`);
@@ -122,7 +123,7 @@ export async function renderClip(sourcePath: string, size: ExportSize, brand: Br
   const audioChain = audio
     ? `;[0:a]aresample=48000,aformat=channel_layouts=stereo[ma];anullsrc=r=48000:cl=stereo,atrim=duration=${END_CARD_SECONDS}[ca];[main][ma][card][ca]concat=n=2:v=1:a=1[v][a]`
     : `;[main][card]concat=n=2:v=1:a=0[v]`;
-  await run("ffmpeg", [
+  await run(await ffmpegPath(), [
     "-loglevel", "error", "-y",
     "-i", sourcePath,
     "-i", overlay,

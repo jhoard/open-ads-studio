@@ -4,10 +4,13 @@ import { RECIPES } from "@/lib/recipes";
 import { loadBrand, loadBrandSafety, loadCopyLines, loadProduct, protectMaskPath } from "@/lib/server/catalog";
 import { cachedKit } from "@/lib/server/cached-kit";
 import { GENERATION_MODE } from "@/lib/server/config";
+import { liveStatus } from "@/lib/server/live";
+import { currentVisitor } from "@/lib/server/visitor";
 import type { StudioData } from "@/lib/studio";
 import type { ApiError } from "@/lib/types";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const assetUrl = (name: string): string => `/api/assets/${encodeURIComponent(name)}`;
 
@@ -22,8 +25,10 @@ export async function GET(): Promise<NextResponse<StudioData | ApiError>> {
   try {
     const [brand, product, safety, copyLines] = await Promise.all([loadBrand(), loadProduct(), loadBrandSafety(), loadCopyLines()]);
     const share = product.protectMask ? await protectedShare(protectMaskPath(product)) : null;
+    const live = await liveStatus(await currentVisitor());
     return NextResponse.json({
-      mode: GENERATION_MODE,
+      mode: live.live ? "live" : GENERATION_MODE === "live" ? "demo" : GENERATION_MODE,
+      live,
       brand: await cachedKit(brand, assetUrl(brand.logo)),
       directionCatalog: brand.sceneDirections,
       product: {

@@ -2,7 +2,8 @@ import { execFile } from "node:child_process";
 import { mkdir, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { pasteGlyphs, type Alignment } from "./glyph-paste";
+import { ffmpegPath, ffprobePath } from "./binaries";
+import { pasteGlyphs, type Alignment, type PasteOptions } from "./glyph-paste";
 
 // Glyph paste on every frame of a clip, each frame tone-matched on its own so a moving light carries
 // across the label. The box must hold still in the clip (keyframed from one still).
@@ -21,26 +22,26 @@ export function alignToClip(align: Alignment, still: { width: number; height: nu
   return { ...align, scaleX: align.scaleX * scale, scaleY: align.scaleY * scale, dx: Math.round(align.dx * scale - cropX), dy: Math.round(align.dy * scale - cropY) };
 }
 
-export async function pasteClip(input: string, output: string, packshotPath: string, maskPath: string, align: Alignment, workDir: string): Promise<number[]> {
+export async function pasteClip(input: string, output: string, packshotPath: string, maskPath: string, align: Alignment, workDir: string, options: PasteOptions = {}): Promise<number[]> {
   const frames = path.join(workDir, "frames");
   const pasted = path.join(workDir, "pasted");
   await rm(workDir, { recursive: true, force: true });
   await mkdir(frames, { recursive: true });
   await mkdir(pasted, { recursive: true });
-  const probe = await run("ffprobe", ["-v", "error", "-select_streams", "v", "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", input]);
+  const probe = await run(await ffprobePath(), ["-v", "error", "-select_streams", "v", "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", input]);
   const rate = probe.stdout.trim();
-  await run("ffmpeg", ["-loglevel", "error", "-i", input, path.join(frames, "%04d.png")]);
+  await run(await ffmpegPath(), ["-loglevel", "error", "-i", input, path.join(frames, "%04d.png")]);
 
   const names = (await readdir(frames)).filter((name) => name.endsWith(".png")).sort();
   const scores: number[] = new Array(names.length);
   for (let start = 0; start < names.length; start += FRAME_CONCURRENCY) {
     await Promise.all(
       names.slice(start, start + FRAME_CONCURRENCY).map(async (name, offset) => {
-        const result = await pasteGlyphs(packshotPath, path.join(frames, name), maskPath, align, path.join(pasted, name), CLIP_PASTE);
+        const result = await pasteGlyphs(packshotPath, path.join(frames, name), maskPath, align, path.join(pasted, name), { ...CLIP_PASTE, ...options });
         scores[start + offset] = result.labelMatch;
       }),
     );
   }
-  await run("ffmpeg", ["-loglevel", "error", "-y", "-framerate", rate, "-i", path.join(pasted, "%04d.png"), "-i", input, "-map", "0:v", "-map", "1:a?", "-c:v", "libx264", "-crf", "14", "-pix_fmt", "yuv420p", "-c:a", "copy", "-shortest", output]);
+  await run(await ffmpegPath(), ["-loglevel", "error", "-y", "-framerate", rate, "-i", path.join(pasted, "%04d.png"), "-i", input, "-map", "0:v", "-map", "1:a?", "-c:v", "libx264", "-crf", "14", "-pix_fmt", "yuv420p", "-c:a", "copy", "-shortest", output]);
   return scores;
 }

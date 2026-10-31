@@ -1,8 +1,5 @@
-import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
 import path from "node:path";
-import { Readable } from "node:stream";
-import { findJob, outputPath } from "@/lib/server/jobs";
+import { findJob, readOutput } from "@/lib/server/jobs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,10 +7,6 @@ export const dynamic = "force-dynamic";
 const UUID_PATTERN = /^[0-9a-f-]{36}$/i;
 const RANGE_PATTERN = /^bytes=(\d*)-(\d*)$/;
 const CONTENT_TYPES: Record<string, string> = { ".mp4": "video/mp4", ".png": "image/png" };
-
-function stream(file: string, start: number, end: number): ReadableStream {
-  return Readable.toWeb(createReadStream(file, { start, end })) as ReadableStream;
-}
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
@@ -23,11 +16,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const name = extra === "raw" || extra === "glyphs" ? record?.extraFiles?.[extra] : record?.outputFile;
   if (!record || !name) return new Response("Not found", { status: 404 });
 
-  const file = outputPath(name);
   const ext = path.extname(name);
   const contentType = CONTENT_TYPES[ext];
   if (!contentType) return new Response("Not found", { status: 404 });
-  const { size } = await stat(file);
+  const data = await readOutput(name);
+  if (!data) return new Response("Not found", { status: 404 });
+  const size = data.length;
   const download = new URL(request.url).searchParams.has("download");
   const headers: Record<string, string> = {
     "Content-Type": contentType,
@@ -44,11 +38,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     if (start > end || start >= size) {
       return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${size}` } });
     }
-    return new Response(stream(file, start, end), {
+    return new Response(new Uint8Array(data.subarray(start, end + 1)), {
       status: 206,
       headers: { ...headers, "Content-Range": `bytes ${start}-${end}/${size}`, "Content-Length": String(end - start + 1) },
     });
   }
 
-  return new Response(stream(file, 0, size - 1), { headers: { ...headers, "Content-Length": String(size) } });
+  return new Response(new Uint8Array(data), { headers: { ...headers, "Content-Length": String(size) } });
 }

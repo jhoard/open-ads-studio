@@ -68,7 +68,7 @@ function ncc(template: Gray, target: Gray, region: { x0: number; y0: number; x1:
   return varA > 0 && varB > 0 ? cov / Math.sqrt(varA * varB) : -1;
 }
 
-interface Box {
+export interface Box {
   x: number;
   y: number;
   width: number;
@@ -146,21 +146,16 @@ async function bestShift(score: Scorer, a: Alignment, radius: number): Promise<A
   return best;
 }
 
-export async function alignPackshot(packshotPath: string, editedPath: string, maskPath: string): Promise<Alignment> {
+/** Refine a scale-and-shift seed by gradient NCC over the label region: shift first, then each scale with the other fixed. */
+export async function refineAlignment(packshotPath: string, editedPath: string, maskPath: string, seed: Alignment, radius = SHIFT_RADIUS): Promise<Alignment> {
   const source = await sharp(packshotPath).metadata();
   const edited = await sharp(editedPath).metadata();
   const size = { width: source.width as number, height: source.height as number };
   const region = await maskBounds(maskPath);
-
-  // The edit model may reframe the shot, so start from the detected box, not from identity.
-  const sourceBox = await detectBox(packshotPath);
-  const editedBox = await detectBox(editedPath, sourceBox.height / sourceBox.width);
-  const guess = editedBox.width / sourceBox.width;
   const target = await gradient(sharp(editedPath), edited.width as number, edited.height as number);
   const score = makeScorer(packshotPath, size, target, region);
 
-  let best = await bestShift(score, { scaleX: guess, scaleY: guess, dx: Math.round(editedBox.x - sourceBox.x * guess), dy: Math.round(editedBox.y - sourceBox.y * guess), score: -1 }, SHIFT_RADIUS);
-  // Coordinate descent: sweep each scale with the other fixed, re-centering the shift as we go.
+  let best = await bestShift(score, { ...seed, dx: Math.round(seed.dx), dy: Math.round(seed.dy), score: -1 }, radius);
   for (let round = 0; round < REFINE_ROUNDS; round++) {
     for (let scaleY = best.scaleX * ASPECT_SPAN.min; scaleY <= best.scaleX * ASPECT_SPAN.max; scaleY += SCALE_STEP) {
       const candidate = await bestShift(score, { ...best, scaleY, score: -1 }, 3);
@@ -173,6 +168,15 @@ export async function alignPackshot(packshotPath: string, editedPath: string, ma
     best = await bestShift(score, best, 4);
   }
   return best;
+}
+
+/** Tauvel's path: the green pack's box seeds the fit, since the edit model may reframe the shot. */
+export async function alignPackshot(packshotPath: string, editedPath: string, maskPath: string): Promise<Alignment> {
+  const sourceBox = await detectBox(packshotPath);
+  const editedBox = await detectBox(editedPath, sourceBox.height / sourceBox.width);
+  const guess = editedBox.width / sourceBox.width;
+  const seed = { scaleX: guess, scaleY: guess, dx: editedBox.x - sourceBox.x * guess, dy: editedBox.y - sourceBox.y * guess, score: -1 };
+  return refineAlignment(packshotPath, editedPath, maskPath, seed);
 }
 
 interface Canvas {
@@ -279,6 +283,10 @@ export interface PasteOptions {
   toneSigma?: number;
   /** Extra px pasted around the glyphs to hide a misregistered model copy; 0 pastes the mask alone. */
   pasteBand?: number;
+  /** The product's box in packshot pixels; default: the green pack found by color. */
+  box?: Box;
+  /** Mirror the label under the base, for a box on a glossy surface. Default true. */
+  reflection?: boolean;
 }
 
 export async function pasteGlyphs(packshotPath: string, editedPath: string, maskPath: string, align: Alignment, outputPath: string, options: PasteOptions = {}): Promise<PasteResult> {
@@ -288,7 +296,7 @@ export async function pasteGlyphs(packshotPath: string, editedPath: string, mask
   const canvas = { width: info.width, height: info.height };
   const n = canvas.width * canvas.height;
 
-  const sourceBox = await detectBox(packshotPath);
+  const sourceBox = options.box ?? (await detectBox(packshotPath));
   const box = {
     x0: Math.max(0, Math.round(align.dx + sourceBox.x * align.scaleX)),
     x1: Math.min(canvas.width - 1, Math.round(align.dx + (sourceBox.x + sourceBox.width) * align.scaleX)),
@@ -310,7 +318,8 @@ export async function pasteGlyphs(packshotPath: string, editedPath: string, mask
   const depth = Math.round((box.base - box.y0) * REFLECTION_DEPTH_SHARE);
   const strip = { left: box.x0, top: box.base + 1, width: box.x1 - box.x0 + 1, height: Math.max(0, Math.min(depth, canvas.height - box.base - 1)) };
   const out = Buffer.from(edited);
-  if (strip.height > 0) {
+  const reflect = options.reflection ?? true;
+  if (reflect && strip.height > 0) {
     const soft = await sharp(edited, { raw: { ...canvas, channels: 3 } }).blur(REFLECTION_SOFTEN_SIGMA).raw().toBuffer();
     const smooth = (t: number): number => t * t * (3 - 2 * t);
     for (let y = strip.top; y < strip.top + strip.height; y++) {
@@ -338,7 +347,7 @@ export async function pasteGlyphs(packshotPath: string, editedPath: string, mask
     // Mirror about the base line, fading to zero at the strip's far edge.
     const my = 2 * box.base - y;
     const distance = my - box.base;
-    if (distance <= 0 || distance > strip.height) continue;
+    if (!reflect || distance <= 0 || distance > strip.height) continue;
     const ra = a * REFLECTION_OPACITY * (1 - distance / strip.height);
     const j = (my * canvas.width + x) * 3;
     for (let c = 0; c < 3; c++) {

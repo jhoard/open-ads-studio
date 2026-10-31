@@ -4,6 +4,8 @@ import type { ApiError, JobView } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// A poll may run a job's post-step: the label paste, or a clip's per-frame paste and encode.
+export const maxDuration = 300;
 
 const UUID_PATTERN = /^[0-9a-f-]{36}$/i;
 
