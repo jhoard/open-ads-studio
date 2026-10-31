@@ -1,16 +1,23 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { StudioProduct } from "@/lib/studio";
+
+export type ProductChoice = "tauvel" | "upload";
 
 interface ProductStepProps {
   product: StudioProduct;
+  choice: ProductChoice;
+  onChoice: (choice: ProductChoice) => void;
+  /** The upload flow, shown when the visitor brings their own product. */
+  uploadPanel: ReactNode;
   showProtect: boolean;
   onShowProtect: (show: boolean) => void;
   protectConfirmed: boolean;
   onConfirm: (confirmed: boolean) => void;
 }
 
-export function ProductStep({ product, showProtect, onShowProtect, protectConfirmed, onConfirm }: ProductStepProps) {
+export function ProductStep({ product, choice, onChoice, uploadPanel, showProtect, onShowProtect, protectConfirmed, onConfirm }: ProductStepProps) {
   const share = product.protectedShare === null ? null : (product.protectedShare * 100).toFixed(1);
 
   return (
@@ -19,6 +26,14 @@ export function ProductStep({ product, showProtect, onShowProtect, protectConfir
         Product
       </h1>
       <p className="step-lede">Mark what can never change. No model is trusted to redraw the label; every creative gets it back from this photo.</p>
+      <div className="segmented" role="radiogroup" aria-label="Product">
+        <button type="button" role="radio" aria-checked={choice === "tauvel"} onClick={() => onChoice("tauvel")}>Tauvel sample</button>
+        <button type="button" role="radio" aria-checked={choice === "upload"} onClick={() => onChoice("upload")}>Your product</button>
+      </div>
+      {choice === "upload" ? (
+        uploadPanel
+      ) : (
+      <>
       <h2 className="step-subtitle">{product.name}</h2>
       <p className="hint">{product.description}</p>
 
@@ -53,6 +68,8 @@ export function ProductStep({ product, showProtect, onShowProtect, protectConfir
           </div>
           <span className="hint">A closed and an opened shot unlock the Reveal recipe.</span>
         </div>
+      )}
+      </>
       )}
     </section>
   );

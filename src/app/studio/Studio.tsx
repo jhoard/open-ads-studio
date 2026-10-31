@@ -3,18 +3,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { BrandKit } from "@/lib/brand-kit";
 import { useCreatives, type CreateRequest } from "@/lib/client/useCreatives";
+import { useUploadedProduct } from "@/lib/client/useUploadedProduct";
+import { MASK_THRESHOLD, type MaskBox } from "@/lib/glyph-mask";
 import { DIRECTION_EXAMPLES } from "@/lib/directions";
 import { findRecipe } from "@/lib/recipes";
 import { distinctReviewCreatives, reviewCreativeKey } from "@/lib/review-creatives";
-import type { Creative, Objective, StudioData } from "@/lib/studio";
+import type { Creative, LiveStatus, Objective, StudioData } from "@/lib/studio";
 import type { ApiError } from "@/lib/types";
 import { BrandPreview } from "./BrandPreview";
+import { BoxEditor } from "./BoxEditor";
 import { BrandStep } from "./BrandStep";
 import { isReady, percent } from "./CreativeCard";
 import { CreateStep, type CreatePreview } from "./CreateStep";
 import { ExportStep } from "./ExportStep";
 import { PreviewStage, type LabelReveal, type PreviewMedia } from "./PreviewStage";
-import { ProductStep } from "./ProductStep";
+import { LiveBanner } from "./LiveBanner";
+import { ProductStep, type ProductChoice } from "./ProductStep";
+import { UploadPanel } from "./UploadPanel";
 import { ReviewStep, defaultCopy } from "./ReviewStep";
 
 const STEPS = [
@@ -56,6 +61,11 @@ export function Studio() {
   const [createPreview, setCreatePreview] = useState<CreatePreview>({ recipe: "scene", directionId: undefined });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const studio = useCreatives();
+  const uploads = useUploadedProduct();
+  const [choice, setChoice] = useState<ProductChoice>("tauvel");
+  const [boxes, setBoxes] = useState<MaskBox[]>([]);
+  const [threshold, setThreshold] = useState<number>(MASK_THRESHOLD.default);
+  const [live, setLive] = useState<LiveStatus | null>(null);
   const controlsRef = useRef<HTMLElement>(null);
   const previousStep = useRef(step);
 
@@ -69,6 +79,7 @@ export function Studio() {
         }
         setData(body);
         setBrand(body.brand);
+        setLive(body.live);
       })
       .catch(() => setLoadError("Could not reach the server."));
   }, []);
@@ -83,24 +94,59 @@ export function Studio() {
     window.scrollTo({ top: 0 });
   }, [step]);
 
-  // A returning visitor with creatives already made has been through Protect.
+  // A saved upload brings back its boxes and threshold.
+  const uploadId = uploads.product?.id;
+  useEffect(() => {
+    if (!uploads.product) return;
+    setBoxes(uploads.product.boxes);
+    setThreshold(uploads.product.threshold);
+    // Only the mask load should reset the draft, not every poll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploadId]);
+
+  // The upload is usable once it is cut out and its label mask is saved.
+  const uploadReady = uploads.product?.status === "ready" && uploads.product.protectedShare !== null;
+  const activeProductId = choice === "upload" && uploadReady && uploads.product ? uploads.product.id : "tauvel";
+  const productOf = (creative: Creative): string => creative.productId ?? "tauvel";
+
+  const chooseProduct = (next: ProductChoice): void => {
+    setChoice(next);
+    setProtectConfirmed(false);
+  };
+
+  // A returning visitor with Tauvel creatives already made has been through Protect.
   const reviewCreatives = distinctReviewCreatives(studio.creatives, studio.copy, studio.approved);
   const hasCreatives = reviewCreatives.length > 0;
   useEffect(() => {
-    if (hasCreatives) setProtectConfirmed(true);
-  }, [hasCreatives]);
+    if (hasCreatives && choice === "tauvel") setProtectConfirmed(true);
+  }, [hasCreatives, choice]);
+
+  const refreshLive = useCallback((): void => {
+    fetch("/api/limits", { cache: "no-store" })
+      .then(async (response) => (await response.json()) as LiveStatus | ApiError)
+      .then((body) => {
+        if (!("error" in body)) setLive(body);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const onCreatePreview = useCallback((preview: CreatePreview) => setCreatePreview(preview), []);
 
-  // Tauvel is preloaded, so Product is open from the start.
-  const unlocked = [true, true, protectConfirmed, hasCreatives, studio.approved.size > 0];
+  // Tauvel is preloaded, so Product is open from the start. An upload unlocks Create once its mask is saved and confirmed.
+  const unlocked = [true, true, protectConfirmed && (choice === "tauvel" || uploadReady), hasCreatives, studio.approved.size > 0];
   const approvedCreatives = reviewCreatives.filter((creative) => studio.approved.has(creative.id) && creative.outputUrl);
-  const sceneSourceId = studio.creatives.find((creative) => !creative.demo && creative.stage === "scene-relight" && creative.status === "succeeded")?.id ?? null;
+  const sceneSourceId =
+    studio.creatives.find((creative) => !creative.demo && creative.stage === "scene-relight" && creative.status === "succeeded" && productOf(creative) === activeProductId)?.id ?? null;
+  const lastFallback = studio.creatives[0]?.fallback?.message ?? null;
   const pool = step === EXPORT ? approvedCreatives : reviewCreatives;
   const selected = pool.find((creative) => creative.id === selectedId) ?? pool[0] ?? null;
 
   const create = async (requests: CreateRequest[], objective: Objective): Promise<void> => {
-    await studio.create(requests, objective);
+    await studio.create(
+      requests.map((request) => ({ ...request, productId: activeProductId })),
+      objective,
+    );
+    refreshLive();
     setSelectedId(null);
     setStep(REVIEW);
   };
@@ -130,6 +176,12 @@ export function Studio() {
   const preview = useMemo((): Preview | null => {
     if (!data || !brand) return null;
     if (step === BRAND) return { media: null, title: brand.name, detail: "Identity reference" };
+    if (step === PRODUCT && choice === "upload") {
+      const upload = uploads.product;
+      if (!upload) return { media: null, title: "Your product", empty: "Upload a product photo to start." };
+      const share = upload.protectedShare === null ? "Box the label to protect it" : `${(upload.protectedShare * 100).toFixed(1)}% of the photo is protected`;
+      return { media: { kind: "image", url: upload.packshotUrl ?? upload.photoUrl }, title: upload.name, detail: upload.status === "ready" ? share : "Cutting out" };
+    }
     if (step === PRODUCT) {
       const share = data.product.protectedShare === null ? "" : `${(data.product.protectedShare * 100).toFixed(1)}% of the photo is protected`;
       return { media: { kind: "image", url: data.product.photoUrl }, title: data.product.name, detail: share };
@@ -156,10 +208,15 @@ export function Studio() {
       reveal: step === REVIEW && scored && !comparing ? { from: selected.modelLabelMatch as number, to: selected.labelMatch as number } : null,
       revealKey: selected.id,
     };
-  }, [data, brand, step, createPreview, selected, studio.copy]);
+  }, [data, brand, step, createPreview, selected, studio.copy, choice, uploads.product]);
 
+  const uploadForEditor = uploads.product?.status === "ready" && uploads.product.packshotUrl && uploads.product.cutoutUrl ? uploads.product : null;
   const protectOverlay =
-    step === PRODUCT && showProtect && data?.product.protectMaskUrl ? (
+    step === PRODUCT && choice === "upload" ? (
+      uploadForEditor ? (
+        <BoxEditor packshotUrl={uploadForEditor.packshotUrl as string} cutoutUrl={uploadForEditor.cutoutUrl as string} boxes={boxes} threshold={threshold} onBoxes={setBoxes} />
+      ) : undefined
+    ) : step === PRODUCT && showProtect && data?.product.protectMaskUrl ? (
       <span className="protect-overlay" style={{ "--mask-url": `url(${data.product.protectMaskUrl})` } as CSSProperties} aria-hidden="true" />
     ) : undefined;
 
@@ -193,22 +250,48 @@ export function Studio() {
           ))}
         </ol>
         <div className="rail-bottom">
-          {data && <p className="mode-pill" data-mode={data.mode}><span className="mode-dot" aria-hidden="true" />{data.mode === "demo" ? "Demo workspace" : "Live generation"}</p>}
-          <p>{data?.mode === "demo" ? "Example renders. No generation." : "Powered by ComfyUI"}</p>
+          {data && <p className="mode-pill" data-mode={live?.live ? "live" : "demo"}><span className="mode-dot" aria-hidden="true" />{live?.live ? "Live generation" : "Demo workspace"}</p>}
+          <p>{live?.live ? "Powered by ComfyUI" : "Example renders. No generation."}</p>
         </div>
       </nav>
 
       <main className="controls" id="studio-editor" ref={controlsRef} tabIndex={-1}>
         <div className="workspace-context"><span>{brand?.name ?? "Workspace"}</span><span>{String(step + 1).padStart(2, "0")} / 05</span></div>
         {loadError && <p className="notice notice-error" role="alert">{loadError}</p>}
+        {live && <LiveBanner live={live} lastFallback={lastFallback} />}
         {data && brand ? (
           <>
             {step === BRAND && <BrandStep kit={brand} catalog={data.directionCatalog} onKit={setBrand} />}
-            {step === PRODUCT && <ProductStep product={data.product} showProtect={showProtect} onShowProtect={setShowProtect} protectConfirmed={protectConfirmed} onConfirm={setProtectConfirmed} />}
+            {step === PRODUCT && (
+              <ProductStep
+                product={data.product}
+                choice={choice}
+                onChoice={chooseProduct}
+                uploadPanel={
+                  <UploadPanel
+                    uploads={uploads}
+                    live={Boolean(live?.live)}
+                    boxes={boxes}
+                    threshold={threshold}
+                    onBoxes={setBoxes}
+                    onThreshold={setThreshold}
+                    protectConfirmed={protectConfirmed}
+                    onConfirm={setProtectConfirmed}
+                  />
+                }
+                showProtect={showProtect}
+                onShowProtect={setShowProtect}
+                protectConfirmed={protectConfirmed}
+                onConfirm={setProtectConfirmed}
+              />
+            )}
             {step === CREATE && (
               <CreateStep
                 directions={brand.sceneDirections}
-                available={{ "reveal-keyframes": data.mode === "demo" || data.product.reveal !== null, "scene-still": data.mode === "demo" || sceneSourceId !== null }}
+                available={{
+                  "reveal-keyframes": activeProductId === "tauvel" && (data.mode === "demo" || data.product.reveal !== null),
+                  "scene-still": data.mode === "demo" || sceneSourceId !== null,
+                }}
                 sceneSourceId={sceneSourceId}
                 mode={data.mode}
                 submitting={studio.submitting}

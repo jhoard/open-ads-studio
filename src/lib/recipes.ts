@@ -111,6 +111,6 @@ export const RECIPE_CARDS: readonly RecipeCard[] = [
 ];
 
 export const NEED_REASON: Record<RecipeNeed, string> = {
-  "reveal-keyframes": "Needs: open shot",
+  "reveal-keyframes": "Needs: closed + open shots",
   "scene-still": "Needs: a finished Scene",
 };

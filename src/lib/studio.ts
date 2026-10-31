@@ -60,6 +60,8 @@ export interface UploadedProductView {
   error: string | null;
   photoUrl: string;
   packshotUrl: string | null;
+  /** The cutout (alpha = product), so the browser can preview the mask exactly as the server builds it. */
+  cutoutUrl: string | null;
   maskUrl: string | null;
   boxes: { x: number; y: number; width: number; height: number }[];
   threshold: number;

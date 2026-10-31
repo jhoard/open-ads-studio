@@ -60,6 +60,7 @@ export function toProductView(product: UploadedProduct): UploadedProductView {
     error: product.error,
     photoUrl: file("photo"),
     packshotUrl: product.status === "ready" ? file("packshot") : null,
+    cutoutUrl: product.status === "ready" ? file("cutout") : null,
     maskUrl: product.protectedShare !== null ? `${file("mask")}?alpha=1&v=${product.threshold}-${product.boxes.length}` : null,
     boxes: product.boxes,
     threshold: product.threshold,
@@ -147,7 +148,7 @@ export async function syncUpload(product: UploadedProduct): Promise<UploadedProd
 }
 
 async function coverage(rgba: Buffer): Promise<number> {
-  const { data, info } = await sharp(rgba).extractChannel(3).raw().toBuffer({ resolveWithObject: true });
+  const { data, info } = await sharp(rgba).ensureAlpha().extractChannel(3).raw().toBuffer({ resolveWithObject: true });
   let on = 0;
   for (let i = 0; i < data.length; i++) if (data[i] >= 128) on++;
   return on / (info.width * info.height);
@@ -160,7 +161,7 @@ export async function updateMask(product: UploadedProduct, boxes: MaskBox[], thr
   const [packshot, cutout] = await Promise.all([store().readFile(productKey(product.id, "packshot.png")), store().readFile(productKey(product.id, "cutout.png"))]);
   if (!packshot || !cutout) throw new UploadError("The product files are missing; upload it again.");
   const { data: rgb, info } = await sharp(packshot).removeAlpha().raw().toBuffer({ resolveWithObject: true });
-  const { data: alpha } = await sharp(cutout).extractChannel(3).raw().toBuffer({ resolveWithObject: true });
+  const { data: alpha } = await sharp(cutout).ensureAlpha().extractChannel(3).raw().toBuffer({ resolveWithObject: true });
   const luma = new Float32Array(info.width * info.height);
   for (let i = 0; i < luma.length; i++) luma[i] = lumaOf(rgb[i * 3], rgb[i * 3 + 1], rgb[i * 3 + 2]);
   const mask = buildGlyphMask(luma, alpha, info.width, info.height, boxes, clamped);

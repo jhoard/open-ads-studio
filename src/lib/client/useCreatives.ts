@@ -10,6 +10,8 @@ const STORAGE_KEY = "open-ads-studio.creatives";
 
 export interface CreateRequest {
   recipe: RecipeId;
+  /** "tauvel" or an uploaded product's ID. */
+  productId?: string;
   directionId?: string;
   sourceCreativeId?: string;
 }
