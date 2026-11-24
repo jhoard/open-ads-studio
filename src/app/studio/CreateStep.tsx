@@ -93,7 +93,7 @@ export function CreateStep({ directions, available, sceneSourceId, mode, showExa
 
       <div className="field">
         <span className="field-label">Scene direction</span>
-        <DirectionSwatches directions={directions} value={activeDirectionId} onChange={pickDirection} />
+        <DirectionSwatches directions={directions} value={activeDirectionId} onChange={pickDirection} showExamples={showExamples} />
         <span className="hint">From your brand kit. Edit surfaces, props and lighting in Brand.</span>
       </div>
 

@@ -7,14 +7,15 @@ interface DirectionSwatchesProps {
   directions: SceneDirection[];
   value: string | undefined;
   onChange: (id: string) => void;
+  showExamples?: boolean;
 }
 
 /** Scene directions as tiles: the direction's own render when there is one, a material tile when not. */
-export function DirectionSwatches({ directions, value, onChange }: DirectionSwatchesProps) {
+export function DirectionSwatches({ directions, value, onChange, showExamples = true }: DirectionSwatchesProps) {
   return (
     <div className="swatches-row" role="radiogroup" aria-label="Scene direction">
       {directions.map((direction, index) => {
-        const example = DIRECTION_EXAMPLES[direction.id];
+        const example = showExamples ? DIRECTION_EXAMPLES[direction.id] : undefined;
         return (
           <button
             key={direction.id}
@@ -37,7 +38,7 @@ export function DirectionSwatches({ directions, value, onChange }: DirectionSwat
               {example && <img src={example.thumbUrl} alt="" loading="lazy" />}
             </span>
             <span className="direction-name">{direction.label}</span>
-            {!example && <span className="direction-note">No approved render yet</span>}
+            {showExamples && !example && <span className="direction-note">No approved render yet</span>}
           </button>
         );
       })}
