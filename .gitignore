@@ -15,3 +15,8 @@ models/
 .playwright-mcp/
 next-env.d.ts
 .claude/settings.local.json
+
+# Local Board Bridge jobs and encrypted connections
+packages/board-bridge/.data/
+.vercel
+.env*

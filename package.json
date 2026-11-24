@@ -8,7 +8,12 @@
     "start": "next start",
     "smoke": "tsx scripts/smoke-cloud.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test \"src/**/*.test.ts\""
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "bridge:dev": "npm --prefix packages/board-bridge run dev",
+    "bridge:worker": "npm --prefix packages/board-bridge run worker",
+    "bridge:build": "npm --prefix packages/board-bridge run build",
+    "bridge:test": "npm --prefix packages/board-bridge run test",
+    "bridge:typecheck": "npm --prefix packages/board-bridge run typecheck"
   },
   "keywords": [],
   "author": "",

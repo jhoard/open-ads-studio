@@ -1,0 +1,102 @@
+{
+  "kind": "analyst-static-source-ledger",
+  "date": "2026-10-29",
+  "authority": "direct static inspection of downloaded public extension; not a REA analysis result",
+  "crx_sha256": "a26e373040431892f6174771bd9eef56956881a4344343b57d4469abff7fe5a6",
+  "extension_version": "1.0.6",
+  "sources": [
+    {
+      "path": "/Users/jameshoard/AI/comfy-hackathon/var/rdata/extension-1.0.6/manifest.json",
+      "sha256": "2aa34ddb7c2717b20e48d467dead93baee6cd949b8a751ddfb101062d4493de1",
+      "bytes": 1058,
+      "excerpts": [
+        {
+          "seed": "\"permissions\"",
+          "character_offset": 328,
+          "text": "ds between Lucidchart, Lucidspark, Miro, and FigJam. 146 shape types, 1,821 cloud icons. Editable, not screenshots.\",\n  \"permissions\": [\n    \"storage\",\n    \"alarms\",\n    \"notifications\",\n    \"cookies\"\n  ],\n  \"host_permissions\": [\n    \"https://documents.lucid.app/*\",\n    \"https://images.lucid.app/*\",\n    \"https://lucid.app/*\",\n    \"https://users.lucid.app/*\",\n    \"https://www.figma.com/*\",\n    \"https://r-data.co/*\",\n    \"https://us.i.posthog.com/*\"\n  ],\n  \"background\": {\n    \"service_worker\": \"service-worker-loader.js\",\n    \"type\": \"module\"\n  },\n  \"action\": {\n    \"default_popup\": \"src/popup/index.html\",\n    \"default_icon\": {\n      \"16\": \"icons/icon16.png\",\n      \"48\": \"icons/icon48.png\",\n      \"128\": \"icons/icon128.png\"\n    }\n  },\n  \"icons\": {\n    \"16\": \"icons/icon16.png\",\n    \"48\": \"icons/icon48.png\",\n    \"128\": \"icons/icon128.png\"\n  }\n}\n"
+        },
+        {
+          "seed": "\"host_permissions\"",
+          "character_offset": 416,
+          "text": " Editable, not screenshots.\",\n  \"permissions\": [\n    \"storage\",\n    \"alarms\",\n    \"notifications\",\n    \"cookies\"\n  ],\n  \"host_permissions\": [\n    \"https://documents.lucid.app/*\",\n    \"https://images.lucid.app/*\",\n    \"https://lucid.app/*\",\n    \"https://users.lucid.app/*\",\n    \"https://www.figma.com/*\",\n    \"https://r-data.co/*\",\n    \"https://us.i.posthog.com/*\"\n  ],\n  \"background\": {\n    \"service_worker\": \"service-worker-loader.js\",\n    \"type\": \"module\"\n  },\n  \"action\": {\n    \"default_popup\": \"src/popup/index.html\",\n    \"default_icon\": {\n      \"16\": \"icons/icon16.png\",\n      \"48\": \"icons/icon48.png\",\n      \"128\": \"icons/icon128.png\"\n    }\n  },\n  \"icons\": {\n    \"16\": \"icons/icon16.png\",\n    \"48\": \"icons/icon48.png\",\n    \"128\": \"icons/icon128.png\"\n  }\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "/Users/jameshoard/AI/comfy-hackathon/var/rdata/extension-1.0.6/assets/globals-DjJcrUIf.js",
+      "sha256": "a0b587b3f9645f474ae5e7fa7d0b356aeede4efa4c87a93cabe82a86d322fba5",
+      "bytes": 548438,
+      "excerpts": [
+        {
+          "seed": "const Du=",
+          "character_offset": 420772,
+          "text": "ure:!1}):V&&Z.error(\"Browser doesn't support `document.addEventListener` so PostHog couldn't be initialized\")})(),i})();const Du=\"https://r-data.co/api\";async function fp(){const i=await Kn.get(Kn.KEYS.SESSION_TOKEN),e={\"Content-Type\":\"application/json\"};return i&&(e.Authorization=`Bearer ${i}`),e}async function Y0(i,e,s){const a=await fp(),o=await fetch(`${Du}${e}`,{method:i,headers:a,body:s?JSON.stringify(s):void 0});if(!o.ok){const u=await o.text().catch(()=>\"\");throw new Error(`API ${i} ${e} failed: ${o.status} ${u}`)}return o.json()}const m3={get(i){return Y0(\"GET\",i)},post(i,e){return Y0(\"POST\",i,e)},async downloadBlob(i){const e=await fp();delete e[\"Content-Type\"];const s=await fetch(`${Du}${i}`,{method:\"GET\",headers:e});if(!s.ok)throw new Error(`Download failed: ${s.status}`);return s.blob()},async login(i,e){const s=await this.post(\"/auth/login\",{email:i,password:e});return await Kn.set(Kn.KEYS.SESSION_TOKEN,s.token),s},async register(i,e){const s=await this.post(\"/auth/register\",{email:i,password:e});return await Kn.set(Kn.KEYS.SESSION_TOKEN,s.token),s},async logout(){await this.post(\"/auth/logout\"),await Kn.remove(Kn.KEYS.SESSION_TOKEN)},async getSession(){try{return await this.get(\"/auth/s"
+        },
+        {
+          "seed": "async getFigjamPluginExtracts",
+          "character_offset": 422500,
+          "text": "turn this.get(\"/figma/teams\")},async getFigmaFiles(i){return this.get(`/figma/files?team_id=${encodeURIComponent(i)}`)},async getFigjamPluginExtracts(i){return i.length===0?{extractions:{}}:this.get(`/figjam/ingest?file_keys=${encodeURIComponent(i.join(\",\"))}`)},async startFigmaExtraction(i,e){return this.post(\"/figma/extract\",{job_id:i,file_keys:e})},async getMiroBoards(){return this.get(\"/miro/boards\")},async startMiroExtraction(i,e){return this.post(\"/miro/extract\",{job_id:i,board_ids:e})},async deleteMiroBoards(i){return this.post(\"/miro/boards/delete\",{board_ids:i})},async startFigJamImport(i){return this.post(\"/figjam/create\",{job_id:i})},async getFigJamDocument(i,e){return this.get(`/figjam/document?job_id=${encodeURIComponent(i)}&doc_id=${encodeURIComponent(e)}`)},async reportFigJamComplete(i,e,s,a){return this.post(\"/figjam/complete\",{job_id:i,doc_id:e,figjam_file_url:s,error:a})},async analyzeBoard(i,e,s){const a=await fp(),o=await fetch(`${Du}/analyze`,{method:\"POST\",headers:a,body:JSON.stringify({source:i,id:e,target:s})});if(o.ok)return{ok:!0,data:await o.json()};if(o.status===429){const u=await o.json().catch(()=>({}));return{ok:!1,rateLimited:!0,retryAfterSeconds:u.retry_after_seconds,p"
+        },
+        {
+          "seed": "async startFigmaExtraction",
+          "character_offset": 422643,
+          "text": "tracts(i){return i.length===0?{extractions:{}}:this.get(`/figjam/ingest?file_keys=${encodeURIComponent(i.join(\",\"))}`)},async startFigmaExtraction(i,e){return this.post(\"/figma/extract\",{job_id:i,file_keys:e})},async getMiroBoards(){return this.get(\"/miro/boards\")},async startMiroExtraction(i,e){return this.post(\"/miro/extract\",{job_id:i,board_ids:e})},async deleteMiroBoards(i){return this.post(\"/miro/boards/delete\",{board_ids:i})},async startFigJamImport(i){return this.post(\"/figjam/create\",{job_id:i})},async getFigJamDocument(i,e){return this.get(`/figjam/document?job_id=${encodeURIComponent(i)}&doc_id=${encodeURIComponent(e)}`)},async reportFigJamComplete(i,e,s,a){return this.post(\"/figjam/complete\",{job_id:i,doc_id:e,figjam_file_url:s,error:a})},async analyzeBoard(i,e,s){const a=await fp(),o=await fetch(`${Du}/analyze`,{method:\"POST\",headers:a,body:JSON.stringify({source:i,id:e,target:s})});if(o.ok)return{ok:!0,data:await o.json()};if(o.status===429){const u=await o.json().catch(()=>({}));return{ok:!1,rateLimited:!0,retryAfterSeconds:u.retry_after_seconds,planTier:u.plan_tier,upgradeLink:u.upgrade_link}}return{ok:!1,rateLimited:!1}},async getJobStatus(i){return this.get(`/jobs/${i}/status`)},async"
+        },
+        {
+          "seed": "async analyzeBoard",
+          "character_offset": 423283,
+          "text": "async reportFigJamComplete(i,e,s,a){return this.post(\"/figjam/complete\",{job_id:i,doc_id:e,figjam_file_url:s,error:a})},async analyzeBoard(i,e,s){const a=await fp(),o=await fetch(`${Du}/analyze`,{method:\"POST\",headers:a,body:JSON.stringify({source:i,id:e,target:s})});if(o.ok)return{ok:!0,data:await o.json()};if(o.status===429){const u=await o.json().catch(()=>({}));return{ok:!1,rateLimited:!0,retryAfterSeconds:u.retry_after_seconds,planTier:u.plan_tier,upgradeLink:u.upgrade_link}}return{ok:!1,rateLimited:!1}},async getJobStatus(i){return this.get(`/jobs/${i}/status`)},async downloadExport(i){const e=`/jobs/${i}/export`,s=await this.downloadBlob(e),a=URL.createObjectURL(s),o=\"zip\",u=document.createElement(\"a\");u.href=a,u.download=`r-data-export-${i.slice(0,8)}.${o}`,document.body.appendChild(u),u.click(),document.body.removeChild(u),URL.revokeObjectURL(a)},async createCheckout(i){return this.post(\"/billing/checkout\",{document_count:i})},async getBillingStatus(){try{return await this.get(\"/billing/status\")}catch{return null}}},$0=\"phc_nwokWLMXeRbyxb73T7v2Av68zfigbnPmkCFPBJ4LFpAH\",_M=\"https://us.i.posthog.com\";let hp=!1;function y3(){hp||!$0||(hp=!0,pl.init($0,{api_host:_M,persistence:\"localStorage\",auto"
+        }
+      ]
+    },
+    {
+      "path": "/Users/jameshoard/AI/comfy-hackathon/var/rdata/extension-1.0.6/assets/dashboard-DTfSbOA4.js",
+      "sha256": "bc62272bf01e2d46bad0740d1f886d3b8e86b1081fdcc926c6548114635d7c93",
+      "bytes": 198603,
+      "excerpts": [
+        {
+          "seed": "Extract this board",
+          "character_offset": 102078,
+          "text": " them.\",Gn=Pe.oauthState===\"expired\"?\"Reconnect Figma\":\"Connect Figma\",tt=\"Or open the board in FigJam and run R-Data \u2192 Extract this board (no sign-in, no API limits).\",Ut=async p=>{if(p.length===0)return[];try{const{extractions:w}=await M.getFigjamPluginExtracts(p);return p.filter(v=>!w[v])}catch{return p}},Yt=o.useRef(new Map);o.useEffect(()=>(clearTimeout(St.current),St.current=setTimeout(()=>B(h),300),()=>clearTimeout(St.current)),[h]),o.useEffect(()=>{if(x){ye(!1);return}(async()=>{ye(!0);const w=async()=>{if(!n.has(\"lucid\"))return{docs:[],folders:[]};try{await chrome.runtime.sendMessage({type:\"VALIDATE_LUCID\"});const D=await chrome.runtime.sendMessage({type:\"FETCH_DOCUMENTS\"});if(D!=null&&D.docs)return{folders:D.folders||[],docs:D.docs.map(q=>({...q,source:\"lucid\"}))}}catch{}return{docs:[],folders:[]}},v=async()=>{if(!n.has(\"miro\"))return[];try{const D=await M.getMiroBoards();if(D!=null&&D.boards)return D.boards.map(q=>({id:q.id,title:q.name||\"Untitled Board\",last_modified:q.last_modified||\"\",source:\"miro\"}))}catch(D){console.error(\"[R-Data] Failed to load Miro boards:\",D)}return[]},H=async()=>{try{const D=await M.get(\"/jobs/history\"),q=new Map;for(const Ce of D.history||[])q.set(Ce.doc_id,{migr"
+        },
+        {
+          "seed": "Miro is not connected.",
+          "character_offset": 109008,
+          "text": "aining??0)<u.size)){JSON.stringify(ee),u.size,T(!0);return}try{if(w===\"miro\"&&!(await M.getMiroStatus()).connected){be(\"Miro is not connected. Go to Home \u2192 Connect Miro before migrating.\");return}const v=S.filter(D=>u.has(D.id)),H=v.some(D=>D.source===\"miro\"),te=v.some(D=>D.source===\"figjam\");if(te&&!H&&!Pe.hasOAuth){const D=v.filter(Ce=>Ce.source===\"figjam\").map(Ce=>Ce.id),q=await Ut(D);if(q.length>0){be(`${q.length} of ${D.length} selected FigJam board${D.length===1?\"\":\"s\"} need${q.length===1?\"s\":\"\"} Figma access. ${jt} ${tt}`);return}}const W=H?\"miro\":te?\"figjam\":\"lucidchart\",Y=v.filter(D=>W===\"miro\"?D.source===\"miro\":W===\"figjam\"?D.source===\"figjam\":D.source===\"lucid\");Y.length<v.length&&v.length-Y.length,Y.length;const ne=await M.post(\"/jobs/create\",{type:w===\"zip\"?\"extract\":\"migrate\",source:W,target:w,document_count:Y.length,documents:Y.map(D=>({id:D.id,title:D.title,lucid_product:D.source===\"lucid\"&&D.product||null}))});ne.job_id,Ge.capture(et.MIGRATION_STARTED,{source:W,target:w,doc_count:Y.length}),r(ne.job_id),Gt(),await ci(W,ne.job_id,Y)}catch(v){if((v instanceof Error?v.message:\"\").includes(\"failed: 402\")){Gt(),T(!0);return}be(v instanceof Error?v.message:\"Failed to start migration. Please"
+        },
+        {
+          "seed": "M.post(\"/jobs/create\"",
+          "character_offset": 109631,
+          "text": "miro\":W===\"figjam\"?D.source===\"figjam\":D.source===\"lucid\");Y.length<v.length&&v.length-Y.length,Y.length;const ne=await M.post(\"/jobs/create\",{type:w===\"zip\"?\"extract\":\"migrate\",source:W,target:w,document_count:Y.length,documents:Y.map(D=>({id:D.id,title:D.title,lucid_product:D.source===\"lucid\"&&D.product||null}))});ne.job_id,Ge.capture(et.MIGRATION_STARTED,{source:W,target:w,doc_count:Y.length}),r(ne.job_id),Gt(),await ci(W,ne.job_id,Y)}catch(v){if((v instanceof Error?v.message:\"\").includes(\"failed: 402\")){Gt(),T(!0);return}be(v instanceof Error?v.message:\"Failed to start migration. Please try again.\")}}},er=async()=>{if(u.size===0||j)return;if(be(null),!Pe.hasOAuth&&ke.some(W=>W.source===\"figjam\")){const W=ke.filter(ne=>ne.source===\"figjam\").map(ne=>ne.id),Y=await Ut(W);if(Y.length>0){be(`${Y.length} of ${W.length} selected FigJam board${W.length===1?\"\":\"s\"} need${Y.length===1?\"s\":\"\"} Figma access to score. ${jt} ${tt}`);return}}U(!0),R(0);const p=Array.from(u);let w=0,v=0,H=null;const te=new Set;for(const W of p){try{const Y=S.find(D=>D.id===W),ne=Y?await fn(Y,a):null;ne===\"rate_limited\"?(v++,H=W):ne&&(z(D=>D.map(q=>q.id===W?{...q,shape_count:ne.shape_count,shapes_mapped:ne.shapes_mapped,shapes_dow"
+        },
+        {
+          "seed": "async function ci(",
+          "character_offset": 61132,
+          "text": "{fontFamily:s,fontSize:17,color:t.textPrimary,fontWeight:500,fontVariantNumeric:\"tabular-nums\"},children:[n,\"%\"]})})]})}async function ci(n,i,r){if(n===\"miro\")await M.startMiroExtraction(i,r.map(a=>a.id));else if(n===\"figjam\")await M.startFigmaExtraction(i,r.map(a=>a.id));else{const a=await K.get(K.KEYS.SESSION_TOKEN);if(!a)throw new Error(\"Session expired. Please log out and log back in.\");const c=await chrome.runtime.sendMessage({type:\"START_EXTRACTION\",payload:{docs:r.map(d=>({id:d.id,title:d.title})),job_id:i,backend_url:\"https://r-data.co\",session_token:a}});if(c!=null&&c.error)throw new Error(`Failed to start extraction: ${c.error}`)}}function zn(){const[n,i]=o.useState(null),[r,a]=o.useState(!0),c=o.useCallback(async()=>{try{const d=await M.get(\"/billing/status\");i(d)}catch{i({has_billing:!1})}a(!1)},[]);return o.useEffect(()=>{c();const d=()=>{document.visibilityState===\"visible\"&&c()};return document.addEventListener(\"visibilitychange\",d),window.addEventListener(\"focus\",c),()=>{document.removeEventListener(\"visibilitychange\",d),window.removeEventListener(\"focus\",c)}},[c]),{billing:n,loading:r,refresh:c}}let xt=yn;const Bt=new Set;let it=null;function zt(){return it||(it=M.get(\"/pricing/config"
+        }
+      ]
+    },
+    {
+      "path": "/Users/jameshoard/AI/comfy-hackathon/var/rdata/extension-1.0.6/assets/index.ts-CHCvJAR5.js",
+      "sha256": "c87a876d0e1b89699411bfa24cf28e2e370953a91c3e5afed89fb1ce88bcd3db",
+      "bytes": 231063,
+      "excerpts": [
+        {
+          "seed": "__Host-figma.authn",
+          "character_offset": 217872,
+          "text": "ma.com\",Oe=300,Ce=e=>new Promise(s=>setTimeout(s,e));async function Ke(){const e=await chrome.cookies.get({url:Rs,name:\"__Host-figma.authn\"});if(!(e!=null&&e.value))return null;try{const s=decodeURIComponent(e.value),t=JSON.parse(s),o=Object.keys(t).filter(a=>/^\\d+$/.test(a));return o.length>0?o[0]:null}catch{return null}}async function ze(e,s,t){return fetch(`${Rs}${e}`,{credentials:\"include\",...t,headers:{accept:\"application/json\",\"x-csrf-bypass\":\"yes\",\"x-figma-user-id\":s,...(t==null?void 0:t.headers)||{}}})}async function xs(){var s;const e=await Ke();if(!e)return{connected:!1,error:\"Not logged into Figma in this browser\",error_code:\"no_cookie\"};try{const t=await ze(\"/api/user/plans\",e);if(t.status===401||t.status===403)return{connected:!1,error:\"Figma session expired. Please log into Figma.\",error_code:\"session_expired\"};if(t.status===429)return{connected:!1,error:\"Rate limited by Figma. Please wait a moment.\",error_code:\"rate_limited\"};if(!t.ok)return{connected:!1,error:`Figma API error: ${t.status}`,error_code:\"api_error\"};const o=await t.json(),r=(((s=o==null?void 0:o.meta)==null?void 0:s.plans)||[]).map(c=>({team_id:String(c.plan_id||\"\"),team_name:String(c.plan_name||\"Unknown Team\"),draft_fold"
+        },
+        {
+          "seed": "async function hr(",
+          "character_offset": 225159,
+          "text": "ceof DOMException&&e.name===\"AbortError\"}function hs(e){const s=Math.min(1e3*2**e,16e3),t=Math.random()*s*.5;return s+t}async function hr(e,s,t,o,a){let r;for(let c=0;c<=$e;c++)try{const i=await fetch(`${e}/api/jobs/${s}/documents`,{method:\"POST\",headers:{\"Content-Type\":\"application/json\",Authorization:`Bearer ${a}`},body:JSON.stringify({doc_id:t,title:o.title,data:o}),signal:AbortSignal.timeout(pr)});if(!i.ok){const u=await i.text().catch(()=>\"\"),l=u?` \u2014 ${u.slice(0,200)}`:\"\";if(ps(null,i.status)&&c<$e){r=new Error(`Backend rejected document ${t}: ${i.status}${l}`),await new Promise(n=>setTimeout(n,hs(c)));continue}throw new Error(`Backend rejected document ${t}: ${i.status}${l}`)}return}catch(i){if(r=i,ps(i)&&c<$e){await new Promise(u=>setTimeout(u,hs(c)));continue}throw i}throw r}async function Ne(e,s,t,o,a){const r=await fetch(`${e}/api/jobs/${s}/documents`,{method:\"PATCH\",headers:{\"Content-Type\":\"application/json\",Authorization:`Bearer ${a}`},body:JSON.stringify({doc_id:t,status:\"failed\",error:o}),signal:AbortSignal.timeout(1e4)});if(!r.ok)throw new Error(`postDocFailure rejected: ${r.status}`)}async function fs(e,s,t,o,a){const r=await fetch(`${e}/api/jobs/${s}/documents`,{method:\"PATCH\",headers"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "No extension installation or execution",
+    "No plugin source or backend source inspected",
+    "REA static application analysis ended with transport closed; no graph result available"
+  ]
+}

@@ -1,0 +1,14 @@
+title = "Open Ads Studio secret scanning"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+  [[rules.allowlists]]
+  description = "Captured browser evidence uses SHA-256 script and resource identifiers."
+  condition = "AND"
+  paths = ['''(?:^|/)docs/(?:magicul|rdata)-evidence\.json$''']
+  regexTarget = "match"
+  regexes = ['''^(?:script_key|resource_key)"\s*:\s*"(?:scr|res)_[a-f0-9]{64}"$''']
