@@ -1,0 +1,7 @@
+/packages/board-bridge/
+/.impeccable/
+/docs/magicul*
+/docs/rdata*
+/docs/HANDOFF-brand-neutral.md
+/.playwright-cli/
+/output/
