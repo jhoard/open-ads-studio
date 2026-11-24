@@ -68,7 +68,7 @@ export function RecipeCard({ card, recipe, selected, showExample = true, disable
         onBlur={rest}
       >
         <div className="recipe-media">
-          {!showExample ? <span className="recipe-placeholder">{recipe.kind === "still" ? "Your product in a brand scene" : "Your product in motion"}</span> : example.kind === "image" ? (
+          {!showExample ? <span className="recipe-placeholder" aria-hidden="true"><svg viewBox="0 0 32 40" width="32" height="40" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="5" y="6" width="22" height="30" rx="2" /><path d="M5 16h22M11 23h10M11 28h7" /></svg></span> : example.kind === "image" ? (
             <img src={example.url} alt="" loading="lazy" />
           ) : (
             <video ref={video} key={example.url} src={example.url} poster={example.posterUrl} muted loop playsInline preload="none" aria-hidden="true" />

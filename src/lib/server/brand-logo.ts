@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import type { Brand } from "@/lib/types";
-import { validateSiteUrl } from "./brand-extract";
+import { validateSiteUrl } from "./public-url";
 
 const MAX_BYTES = 1024 * 1024;
 
