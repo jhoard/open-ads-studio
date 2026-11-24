@@ -113,6 +113,9 @@ export type FileRef = string;
 export type AlignMode = "green-box" | "silhouette" | "best";
 
 export interface StageJob {
+  /** Brand and product at submission, preserved for review and export. */
+  brand?: Brand;
+  productId?: string;
   id: string;
   idempotencyKey: string;
   stage: StageName;
@@ -155,6 +158,8 @@ export interface StageJob {
 
 /** What the browser sees: no filesystem paths, no Comfy internals beyond the job ID. */
 export interface JobView {
+  brand?: Brand;
+  productId?: string;
   id: string;
   stage: StageName;
   runId: string;

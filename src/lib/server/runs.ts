@@ -64,7 +64,7 @@ export async function sourceScene(id: string | undefined, visitor: string): Prom
 
 export async function startRecipe(brand: Brand, product: ProductSource, request: RecipeRequest, visitor: string): Promise<StageJob> {
   const seed = request.seed ?? DEFAULT_SEEDS[request.recipe];
-  const base = { id: randomUUID(), runId: randomUUID(), idempotencyKey: request.idempotencyKey, visitor };
+  const base = { id: randomUUID(), runId: randomUUID(), idempotencyKey: request.idempotencyKey, visitor, brand, productId: product.id };
 
   if (request.recipe === "scene") {
     const direction = brand.sceneDirections.find((candidate) => candidate.id === request.directionId) ?? brand.sceneDirections[0];
@@ -76,18 +76,20 @@ export async function startRecipe(brand: Brand, product: ProductSource, request:
       stage: "scene-relight",
       label: `Scene: ${direction.label}`,
       // Scene keeps the packshot's own framing; export sizes come later. The aspect is recorded only.
-      params: { imagePath: await resolveRef(product.packshot), aspect: "3:4", prompt: relightPrompt(direction), seed, quality: "fast" },
+      params: { imagePath: await resolveRef(product.packshot), aspect: "3:4", prompt: relightPrompt(direction, brand), seed, quality: "fast" },
       glyphPaste: { packshotPath: product.packshot, protectMaskPath: product.mask, align, ...(packshotCutout ? { packshotCutout } : {}) },
     });
   }
 
   if (request.recipe === "cinemagraph") {
     const source = await sourceScene(request.sourceCreativeId, visitor);
+    if ((source.productId ?? "tauvel") !== product.id) throw new RecipeInputError("Choose a finished Scene of this product.");
     const paste = source.glyphPaste as NonNullable<StageJob["glyphPaste"]>;
     const still = outputRef(source.outputFile as string);
     const stillPath = await resolveRef(still);
     return createJob({
       ...base,
+      brand: source.brand ?? brand,
       stage: "hero-h3",
       label: "Cinemagraph",
       params: { imagePath: stillPath, endImagePath: stillPath, aspect: CINEMAGRAPH_ASPECT, prompt: CINEMAGRAPH_PROMPT, seed, durationSeconds: CINEMAGRAPH_SECONDS },

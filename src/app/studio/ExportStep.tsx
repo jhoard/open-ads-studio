@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { EXPORT_SIZES, type ExportSize } from "@/lib/export-layout";
-import type { BrandSafety, Creative } from "@/lib/studio";
+import { safetyForCreative, type BrandSafety, type Creative } from "@/lib/studio";
 import { claimsFor } from "./CopyLine";
 import { percent } from "./CreativeCard";
 
@@ -20,7 +20,7 @@ async function downloadPack(creative: Creative, copy: string, sizes: ExportSize[
   const response = await fetch("/api/export", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ creativeId: creative.id, recipe: creative.recipe, demo: creative.demo, exampleUrl: creative.outputUrl, sizes, copy }),
+    body: JSON.stringify({ creativeId: creative.id, recipe: creative.recipe, demo: creative.demo, exampleUrl: creative.outputUrl, sizes, copy, brand: creative.brand }),
   });
   if (!response.ok) {
     try {
@@ -121,7 +121,7 @@ export function ExportStep({ creatives, selectedId, onSelect, copyFor, safety }:
       ) : (
         <ul className="export-list">
           {creatives.map((creative) => (
-            <ExportRow key={creative.id} creative={creative} copy={copyFor(creative)} safety={safety} selected={creative.id === selectedId} onSelect={() => onSelect(creative.id)} />
+            <ExportRow key={creative.id} creative={creative} copy={copyFor(creative)} safety={safetyForCreative(creative, safety)} selected={creative.id === selectedId} onSelect={() => onSelect(creative.id)} />
           ))}
         </ul>
       )}

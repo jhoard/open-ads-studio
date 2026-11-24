@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readBrand } from "@/lib/brand-kit";
 import { DEFAULT_DIRECTION, DIRECTION_EXAMPLES } from "@/lib/directions";
 import { findRecipe, type RecipeId } from "@/lib/recipes";
 import { loadBrand, loadProduct } from "@/lib/server/catalog";
@@ -9,7 +10,7 @@ import { isProductId, loadUpload } from "@/lib/server/products";
 import { RecipeInputError, catalogSource, startRecipe, uploadSource, type ProductSource } from "@/lib/server/runs";
 import { currentVisitor } from "@/lib/server/visitor";
 import { FALLBACK_MESSAGES, type Creative, type FallbackReason } from "@/lib/studio";
-import type { ApiError } from "@/lib/types";
+import type { ApiError, Brand } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -21,6 +22,7 @@ const CATALOG_PRODUCT = "tauvel";
 const fail = (status: number, error: string): NextResponse<ApiError> => NextResponse.json({ error }, { status });
 
 interface RunBody {
+  brand?: unknown;
   recipe?: unknown;
   directionId?: unknown;
   seed?: unknown;
@@ -30,6 +32,16 @@ interface RunBody {
 }
 
 const runKind = (recipe: RecipeId): RunKind => (recipe === "scene" ? "scene" : "video");
+
+const UPLOAD_UNAVAILABLE: Record<FallbackReason, string> = {
+  "demo-mode": "Live generation is turned off on this deployment.",
+  "no-key": "Live generation is temporarily unavailable.",
+  "no-guard": "Live generation is temporarily unavailable.",
+  "visitor-scene": "You have used today's Scene runs. Try again tomorrow.",
+  "visitor-video": "You have used today's video runs. Try again tomorrow.",
+  global: "Today's shared run budget is used up. Try again tomorrow.",
+  "comfy-error": "Comfy Cloud could not take the job. Try again shortly.",
+};
 
 /** The recipe's bundled example, shaped like a finished job; marked with why it is not a live run. */
 function demoCreative(recipe: RecipeId, idempotencyKey: string, directionId: string | undefined, reason: FallbackReason, productId: string): Creative {
@@ -72,6 +84,7 @@ export async function POST(request: Request): Promise<NextResponse<Creative | Ap
   let body: RunBody;
   try {
     body = (await request.json()) as RunBody;
+    if (!body || typeof body !== "object") return fail(400, "Expected a JSON object.");
   } catch {
     return fail(400, "Expected a JSON body.");
   }
@@ -85,8 +98,17 @@ export async function POST(request: Request): Promise<NextResponse<Creative | Ap
   if (typeof productId !== "string" || (productId !== CATALOG_PRODUCT && !isProductId(productId))) return fail(400, "Invalid product.");
 
   const visitor = await currentVisitor();
+  let brand: Brand;
+  try {
+    brand = body.brand === undefined && productId === CATALOG_PRODUCT ? await loadBrand() : readBrand(body.brand);
+  } catch (error) {
+    return fail(400, error instanceof Error ? error.message : "Invalid brand kit.");
+  }
+  if (body.directionId !== undefined && !brand.sceneDirections.some((direction) => direction.id === body.directionId)) return fail(400, "Choose a direction from your brand kit.");
   const directionId = body.directionId as string | undefined;
-  const fallback = (reason: FallbackReason): NextResponse<Creative> => NextResponse.json(demoCreative(recipe.id, body.idempotencyKey as string, directionId, reason, productId));
+  const fallback = (reason: FallbackReason): NextResponse<Creative | ApiError> => productId === CATALOG_PRODUCT
+    ? NextResponse.json({ ...demoCreative(recipe.id, body.idempotencyKey as string, directionId, reason, productId), brand })
+    : fail(reason === "visitor-scene" || reason === "visitor-video" || reason === "global" ? 429 : 503, UPLOAD_UNAVAILABLE[reason]);
 
   let product: ProductSource;
   if (productId === CATALOG_PRODUCT) {
@@ -103,13 +125,14 @@ export async function POST(request: Request): Promise<NextResponse<Creative | Ap
   if (blocked) return fallback(blocked);
 
   const existing = await findJobByKey(body.idempotencyKey);
+  if (existing?.visitor && existing.visitor !== visitor.id) return fail(404, "That run is not in your workspace.");
   if (existing) return NextResponse.json({ ...toView(existing), recipe: recipe.id, demo: false, productId });
 
   const allowed = await consumeRun(runKind(recipe.id), visitor);
   if (!allowed.ok) return fallback(allowed.reason);
 
   try {
-    const job = await startRecipe(await loadBrand(), product, { recipe: recipe.id, directionId, seed: body.seed as number | undefined, sourceCreativeId: body.sourceCreativeId as string | undefined, idempotencyKey: body.idempotencyKey }, visitor.id);
+    const job = await startRecipe(brand, product, { recipe: recipe.id, directionId, seed: body.seed as number | undefined, sourceCreativeId: body.sourceCreativeId as string | undefined, idempotencyKey: body.idempotencyKey }, visitor.id);
     return NextResponse.json({ ...toView(job), recipe: recipe.id, demo: false, productId }, { status: 201 });
   } catch (error: unknown) {
     if (error instanceof RecipeInputError) return fail(422, error.message);

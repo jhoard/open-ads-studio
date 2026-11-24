@@ -26,7 +26,7 @@ function Verdict({ check }: { check: ClaimsCheck }) {
   if (check.status === "flagged") {
     return (
       <p className="claims claims-flagged" role="status">
-        Needs substantiation: &quot;{check.flagged.join('", "')}&quot;. Supplement claims need FTC-grade evidence before this runs.
+        Needs substantiation: &quot;{check.flagged.join('", "')}&quot;. Review the evidence for these claims before publishing.
       </p>
     );
   }

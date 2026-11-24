@@ -2,7 +2,7 @@ import { lookup } from "node:dns/promises";
 import { BlockList, isIP } from "node:net";
 import { chromium, type Browser, type BrowserContext } from "playwright-core";
 import { extractDesign, type ExtractedDesign } from "../../../packages/design-extract/src/extractor.js";
-import { deriveDirectionIds, directionsFor, namePalette, pickTheme, type BrandKit } from "@/lib/brand-kit";
+import { deriveDirectionIds, directionsFor, namePalette, neutralDirections, pickTheme, type BrandKit } from "@/lib/brand-kit";
 import type { SceneDirection } from "@/lib/types";
 
 // Brand from URL: the vendored Design Extractor, run in local Playwright or serverless Chromium.
@@ -143,10 +143,10 @@ function launcher(site: VettedSite): () => Promise<Browser> {
   };
 }
 
-function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+function withTimeout<T>(work: Promise<T>, ms: number, controller: AbortController): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`The crawl took longer than ${Math.round(ms / 1000)} s.`)), ms);
+    timer = setTimeout(() => { controller.abort(); reject(new Error(`The crawl took longer than ${Math.round(ms / 1000)} s.`)); }, ms);
   });
   return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
 }
@@ -172,6 +172,7 @@ function pickLogo(data: ExtractedDesign, url: URL): string {
 
 /** Map the Extractor's output onto the kit: palette, type, logo, hero images, theme, directions. */
 function toKit(data: ExtractedDesign, markdown: string, url: URL, catalog: SceneDirection[]): BrandKit {
+  if (/^(just a moment|access denied|attention required|forbidden|error\b)/i.test(data.title.trim())) throw new Error("The site blocked extraction.");
   const hexes = [...data.colors.primary, ...data.colors.neutrals].filter((hex) => /^#[0-9a-f]{6}$/i.test(hex)).slice(0, MAX_PALETTE);
   const display = data.typography.headings.find((heading) => heading.tag === "h1") ?? data.typography.headings[0];
   const body = data.typography.bodyFont?.fontFamily ?? data.typography.fontFamilies[0]?.family ?? "the site's body face";
@@ -193,7 +194,7 @@ function toKit(data: ExtractedDesign, markdown: string, url: URL, catalog: Scene
     },
     tone: "",
     audience: "",
-    sceneDirections: directionsFor(deriveDirectionIds(weighted), catalog),
+    sceneDirections: directionsFor(deriveDirectionIds(weighted), neutralDirections(catalog)),
     heroImages: data.assets.heroImages.map((image) => image.src).filter((src) => /^https?:\/\//.test(src)).slice(0, MAX_HERO_IMAGES),
     theme: pickTheme(hexes),
     source: "crawl",
@@ -204,9 +205,11 @@ function toKit(data: ExtractedDesign, markdown: string, url: URL, catalog: Scene
 export async function crawlBrand(raw: string, catalog: SceneDirection[]): Promise<BrandKit> {
   const site = await validateSiteUrl(raw);
   const guard = createGuard(privateHost);
+  const controller = new AbortController();
   const { markdown, data } = await withTimeout(
-    extractDesign(site.url.toString(), { launch: launcher(site), prepareContext: guard.prepareContext, beforeExtract: guard.assertClean }),
+    extractDesign(site.url.toString(), { launch: launcher(site), prepareContext: guard.prepareContext, beforeExtract: guard.assertClean, signal: controller.signal }),
     CRAWL_BUDGET_MS,
+    controller,
   );
   await guard.assertClean();
   return toKit(data, markdown, site.url, catalog);

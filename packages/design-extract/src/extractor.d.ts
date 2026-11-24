@@ -32,5 +32,5 @@ export interface ExtractedDesign {
 
 export function extractDesign(
   url: string,
-  options: { launch: () => Promise<Browser>; prepareContext?: (context: BrowserContext) => Promise<void>; beforeExtract?: () => Promise<void>; onProgress?: (message: string) => void },
+  options: { launch: () => Promise<Browser>; prepareContext?: (context: BrowserContext) => Promise<void>; beforeExtract?: () => Promise<void>; onProgress?: (message: string) => void; signal?: AbortSignal },
 ): Promise<{ markdown: string; data: ExtractedDesign }>;

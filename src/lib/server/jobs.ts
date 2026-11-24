@@ -60,6 +60,8 @@ const OUTPUT_EXTENSION: Record<OutputKind, string> = { image: "png", video: "mp4
 const CONTENT_TYPE: Record<OutputKind, string> = { image: "image/png", video: "video/mp4" };
 
 interface CreateJobInput {
+  brand?: StageJob["brand"];
+  productId?: string;
   id: string;
   stage: StageName;
   runId: string;
@@ -71,12 +73,14 @@ interface CreateJobInput {
   visitor?: string;
 }
 
-export async function createJob({ id, stage, runId, label, idempotencyKey, params, glyphPaste, clipPaste, visitor }: CreateJobInput): Promise<StageJob> {
+export async function createJob({ id, stage, runId, label, idempotencyKey, params, glyphPaste, clipPaste, visitor, brand, productId }: CreateJobInput): Promise<StageJob> {
   const client = new Comfy();
   const workflow = await buildWorkflow(client, stage, params);
   const submitted = await client.submit(workflow);
   const now = new Date().toISOString();
   const record: StageJob = {
+    ...(brand ? { brand } : {}),
+    ...(productId ? { productId } : {}),
     id,
     idempotencyKey,
     stage,
@@ -334,6 +338,8 @@ async function finish(claimed: StageJob, update: Partial<StageJob>): Promise<Sta
 
 export function toView(record: StageJob): JobView {
   return {
+    ...(record.brand ? { brand: record.brand } : {}),
+    ...(record.productId ? { productId: record.productId } : {}),
     id: record.id,
     stage: record.stage,
     runId: record.runId,

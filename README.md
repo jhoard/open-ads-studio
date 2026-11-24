@@ -56,9 +56,35 @@ The key stays server-side. `.env` is loaded with override, so it beats any key i
 
 Tests: `npm test` (claims guard, export layouts, brand kit and DESIGN.md round trip).
 
-### Brand from a URL
+### Use your own brand
 
-The Brand step runs the Design Extractor (vendored in `packages/design-extract`) on the site you paste: palette, typography, logo and hero images become the brand kit, and scene directions start from the palette (dark-dominant brands get Slate beam and Dark stone evening, light-dominant ones Linen ritual and Travertine morning). Locally it uses Playwright's Chromium (`npx playwright-core install chromium` once if you have none cached); on Vercel it uses `@sparticuz/chromium`. If a crawl fails or runs past 45 s, the cached Tauvel kit loads with a notice. Download DESIGN.md exports the kit in the Extractor's format with your tone, audience and scene-direction edits appended; Import DESIGN.md reads one back. The crawler only visits public http(s) sites; local and private addresses are refused.
+On Brand, enter a public website URL **or** upload a brand `.md` file. Both paths produce an editable kit in the app. No operator needs to collect or prepare documents for you. Tauvel is an explicit sample, available through "Try the Tauvel demo instead".
+
+Website import runs the Design Extractor (vendored in `packages/design-extract`) for colors, fonts, logos and reference images. It uses Playwright Chromium locally (`npx playwright-core install chromium` once) and bundled `@sparticuz/chromium` on Vercel. Crawls have a 45-second budget. Sites that block access return a retry/upload message and keep your current kit. The app never substitutes another brand. Only public http(s) addresses are accepted.
+
+Markdown can be an Extractor DESIGN.md, a kit downloaded from this app, or a handwritten brand file up to 512 KB. For example:
+
+```md
+# North Goods
+- Website: https://example.com
+- Tagline: Made for outside.
+- Display font: Inter
+- Body font: Lato
+- Tone: Calm and practical.
+- Audience: Weekend walkers.
+
+## Palette
+- Primary: #224466
+- Light: #ffffff
+```
+
+Review the name, palette, logo URL, typography, voice, audience, and scene settings before continuing. Scene defaults are based on palette brightness and have no sample-brand props. The editable kit is saved in this browser; private browsing or clearing site data can remove it. Download kit saves an exact snapshot, including custom directions and multiline voice fields, for later import.
+
+Next, upload your product, wait for its BiRefNet cutout, box its label and logo, save the mask, and confirm protection. Create a Scene, review its label match and copy, approve it, and download the pack. Each live job stores the brand snapshot used at submission. Exports use that snapshot's colors and public logo (or the brand name when the logo is unavailable), and include `brand.json` with a matching provenance reference. Export typography currently uses bundled OFL fonts; imported font names are references, not downloaded font files. Uploaded products do not receive Tauvel's copy or supplement category. Automated copy checks remain conservative; they do not assess a new product's regulatory category.
+
+Reveal remains available only for the sample product because uploads do not yet accept two reveal keyframes. Cinemagraph animates a finished Scene of the selected product. If live generation is unavailable or a limit is reached, uploaded products receive a clear error rather than a sample render.
+
+For hosted live mode, configure `GENERATION_MODE=live`, `COMFY_API_KEY`, `VISITOR_SALT`, `BLOB_READ_WRITE_TOKEN`, and `KV_REST_API_URL` / `KV_REST_API_TOKEN`. Blob stores uploads, outputs and job records; Upstash enforces 10 Scene runs and 3 video runs per visitor per UTC day, plus a shared 150-run daily cap. BiRefNet uploads have a separate cap of five per visitor per day. Defaults live in `src/lib/server/limits.ts`. Hosted live generation stays off if the required guards are missing. Local files remain supported for local runs.
 
 Run recipes from the command line:
 

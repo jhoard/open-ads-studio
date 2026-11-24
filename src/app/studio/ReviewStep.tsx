@@ -1,6 +1,6 @@
 "use client";
 
-import type { BrandSafety, Creative, Objective } from "@/lib/studio";
+import { safetyForCreative, type BrandSafety, type Creative, type Objective } from "@/lib/studio";
 import { CreativeDetail, CreativeRow } from "./CreativeCard";
 
 interface ReviewStepProps {
@@ -17,7 +17,7 @@ interface ReviewStepProps {
 }
 
 /** The line a creative starts with: the first suggestion for its objective. */
-export const defaultCopy = (creative: Creative, lines: Record<Objective, string[]>): string => lines[creative.objective ?? "awareness"][0] ?? "";
+export const defaultCopy = (creative: Creative, lines: Record<Objective, string[]>): string => creative.brand && creative.brand.id !== "tauvel" ? creative.brand.tagline || creative.brand.name : lines[creative.objective ?? "awareness"][0] ?? "";
 
 export function ReviewStep({ creatives, selected, approved, copy, copyLines, safety, onSelect, onCopyChange, onToggleApproved, onRemove }: ReviewStepProps) {
   return (
@@ -42,8 +42,8 @@ export function ReviewStep({ creatives, selected, approved, copy, copyLines, saf
               creative={selected}
               approved={approved.has(selected.id)}
               copy={copy[selected.id] ?? defaultCopy(selected, copyLines)}
-              copyLines={copyLines}
-              safety={safety}
+              copyLines={selected.brand && selected.brand.id !== "tauvel" ? Object.fromEntries(Object.keys(copyLines).map((key) => [key, [selected.brand?.tagline || selected.brand?.name || ""]])) as Record<Objective, string[]> : copyLines}
+              safety={safetyForCreative(selected, safety)}
               onCopyChange={(text) => onCopyChange(selected.id, text)}
               onToggleApproved={() => onToggleApproved(selected.id)}
               onRemove={() => onRemove(selected.id)}

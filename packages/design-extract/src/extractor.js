@@ -21,14 +21,18 @@ const SETTLE_MS = 800;
 /**
  * Main extraction orchestrator.
  * @param {string} url
- * @param {{ launch: () => Promise<import('playwright-core').Browser>, prepareContext?: (context: import('playwright-core').BrowserContext) => Promise<void>, beforeExtract?: () => Promise<void>, onProgress?: (msg: string) => void }} options
+ * @param {{ launch: () => Promise<import('playwright-core').Browser>, prepareContext?: (context: import('playwright-core').BrowserContext) => Promise<void>, beforeExtract?: () => Promise<void>, onProgress?: (msg: string) => void, signal?: AbortSignal }} options
  */
 export async function extractDesign(url, options) {
-  const { launch, prepareContext, beforeExtract, onProgress } = options;
+  const { launch, prepareContext, beforeExtract, onProgress, signal } = options;
   const log = (msg) => onProgress?.(msg);
 
   log('Launching browser...');
   const browser = await launch();
+  const abort = () => { void browser.close().catch(() => undefined); };
+  signal?.addEventListener('abort', abort, { once: true });
+  try {
+  signal?.throwIfAborted();
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
     userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -38,9 +42,9 @@ export async function extractDesign(url, options) {
   await prepareContext?.(context);
   const page = await context.newPage();
 
-  try {
     log(`Navigating to ${url}...`);
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: NAVIGATION_TIMEOUT_MS });
+    const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: NAVIGATION_TIMEOUT_MS });
+    if (!response || response.status() >= 400) throw new Error('The website could not be read.');
     try {
       await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS });
     } catch {
@@ -98,6 +102,7 @@ export async function extractDesign(url, options) {
 
     return { markdown, data };
   } finally {
+    signal?.removeEventListener('abort', abort);
     await browser.close();
   }
 }

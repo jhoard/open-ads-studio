@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RecipeId } from "@/lib/recipes";
 import type { Creative, Objective } from "@/lib/studio";
-import { TERMINAL_STATUSES, type ApiError, type JobView } from "@/lib/types";
+import { TERMINAL_STATUSES, type ApiError, type Brand, type JobView } from "@/lib/types";
 
 const POLL_INTERVAL_MS = 3000;
 const STORAGE_KEY = "open-ads-studio.creatives";
 
 export interface CreateRequest {
+  brand?: Brand;
   recipe: RecipeId;
   /** "tauvel" or an uploaded product's ID. */
   productId?: string;
@@ -23,7 +24,7 @@ export interface UseCreatives {
   copy: Record<string, string>;
   error: string | null;
   submitting: boolean;
-  create: (requests: CreateRequest[], objective: Objective) => Promise<void>;
+  create: (requests: CreateRequest[], objective: Objective) => Promise<boolean>;
   toggleApproved: (id: string) => void;
   setCopy: (id: string, text: string) => void;
   remove: (id: string) => void;
@@ -113,7 +114,7 @@ export function useCreatives(): UseCreatives {
     return () => clearTimeout(timer);
   }, [running, creatives]);
 
-  const create = useCallback(async (requests: CreateRequest[], objective: Objective): Promise<void> => {
+  const create = useCallback(async (requests: CreateRequest[], objective: Objective): Promise<boolean> => {
     setSubmitting(true);
     setError(null);
     try {
@@ -131,8 +132,10 @@ export function useCreatives(): UseCreatives {
       const made = results.filter((result): result is Creative => !("error" in result)).map((creative) => ({ ...creative, objective }));
       if (failures.length) setError(failures.map((failure) => failure.error).join(" "));
       setCreatives((current) => [...made, ...current]);
+      return made.length > 0;
     } catch {
       setError("Could not reach the server. Check your connection and try again.");
+      return false;
     } finally {
       setSubmitting(false);
     }

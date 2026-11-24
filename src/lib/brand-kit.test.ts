@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { deriveDirectionIds, parseDesignMd, pickTheme, toDesignMd, type BrandKit } from "./brand-kit";
+import { deriveDirectionIds, kitFromDesignMd, parseDesignMd, pickTheme, readBrand, restoreKit, toDesignMd, type BrandKit } from "./brand-kit";
 
 test("dark-dominant palettes get the dark sets", () => {
   assert.deepEqual(deriveDirectionIds([{ color: "#111111", weight: 70 }, { color: "#f5f0e8", weight: 30 }]), ["slate-beam", "dark-stone-evening"]);
@@ -31,7 +31,7 @@ test("an exported DESIGN.md round-trips the edited voice and directions", () => 
     logo: "",
     logoUrl: "",
     logoKind: "image",
-    palette: [],
+    palette: [{ token: "primary", hex: "#1a2b3c", use: "brand" }],
     typography: { display: "Inter", supporting: "Inter" },
     tone: "Warm and exact.",
     audience: "Home baristas.",
@@ -49,6 +49,36 @@ test("an exported DESIGN.md round-trips the edited voice and directions", () => 
   assert.deepEqual(parsed.palette, ["#1a2b3c"]);
   // Exporting again does not stack a second voice section.
   assert.equal(toDesignMd({ ...kit, designMd: toDesignMd(kit) }).split("## Brand voice").length, 2);
+  const restored = kitFromDesignMd(toDesignMd({ ...kit, tone: "First line\nSecond line" }), []);
+  assert.equal(restored.tone, "First line\nSecond line");
+  assert.deepEqual(restored.sceneDirections, kit.sceneDirections);
+  assert.deepEqual(readBrand(restoreKit(restored)), readBrand(restored));
+});
+
+const catalog = [{ id: "linen-ritual", label: "Linen ritual", surface: "linen", props: "coffee beans", light: "daylight" }];
+
+test("a handwritten brand Markdown imports common labels and shorthand colors", () => {
+  const kit = kitFromDesignMd("# North Goods\r\n- **Brand name:** North\r\n- Website: https://example.com\r\n- Display font: Inter\r\n- Body font: Lato\r\n- Tagline: Made for outside.\r\n## Colors\r\n#246 #FFFFFF\r\n## Tone of voice\r\nCalm and practical.\r\n## Target audience\r\nWeekend walkers.\r\n", catalog);
+  assert.equal(kit.name, "North");
+  assert.deepEqual(kit.palette.map((color) => color.hex), ["#224466", "#ffffff"]);
+  assert.equal(kit.typography.display, "Inter");
+  assert.equal(kit.typography.supporting, "Lato");
+  assert.equal(kit.tone, "Calm and practical.");
+  assert.equal(kit.audience, "Weekend walkers.");
+  assert.equal(kit.website, "https://example.com/");
+  assert.ok(!kit.sceneDirections[0].props.includes("coffee"));
+});
+
+test("empty and unrelated files are rejected instead of creating a fake brand", () => {
+  for (const markdown of ["", "hello", "# Meeting notes\nDiscuss the launch.", "# Bad\n\0"]) assert.throws(() => kitFromDesignMd(markdown, catalog));
+});
+
+test("unknown direction IDs fall back to a usable setting and unsafe logo URLs are removed", () => {
+  const kit = kitFromDesignMd("# North\n#224466\n- Logo: javascript:alert(1)\n## Brand voice (Open Ads Studio)\n- Name: North\n## Scene directions (Open Ads Studio)\n- Missing (unknown-id): a; b; c", catalog);
+  assert.equal(kit.sceneDirections[0].id, "linen-ritual");
+  assert.equal(kit.logo, "");
+  assert.throws(() => readBrand({ ...kit, palette: [{ hex: "red" }] }));
+  assert.throws(() => readBrand({ ...kit, sceneDirections: [] }));
 });
 
 test("a palette without dark colors still yields a dark, readable surface", () => {

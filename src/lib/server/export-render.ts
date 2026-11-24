@@ -7,6 +7,8 @@ import { exportLayout, type Box, type ExportLayout, type ExportSize } from "@/li
 import type { Brand } from "@/lib/types";
 import { textBlock } from "./text-paths";
 import { ffmpegPath, ffprobePath } from "./binaries";
+import { loadBrandLogo } from "./brand-logo";
+import { luma, pickTheme } from "@/lib/brand-kit";
 
 // Deterministic export renders: the creative cover-fitted into an ad layout, the copy line,
 // the logo, and the AI-disclosure badge. No model runs here.
@@ -29,19 +31,21 @@ interface Palette {
 }
 
 function palette(brand: Brand): Palette {
+  if (brand.id !== "tauvel") {
+    const theme = pickTheme(brand.palette.map((color) => color.hex));
+    return { ground: theme.surface, ink: "#ffffff", accent: luma(theme.accent) > 0.3 ? theme.accent : "#ffffff", card: theme.surface };
+  }
   const hex = (token: string, fallback: string): string => brand.palette.find((color) => color.token === token)?.hex ?? fallback;
   return { ground: hex("espresso", "#2B1A12"), ink: hex("cream", "#F2EADF"), accent: hex("brushed-gold", "#B8925A"), card: hex("bottle-green", "#1F3A2E") };
 }
 
 /** The single-source logo, recolored and placed: its paths use currentColor. */
-async function logoSvg(brand: Brand, box: Box, color: string): Promise<string> {
-  const source = await readFile(path.join(process.cwd(), "assets", "tauvel", path.basename(brand.logo)), "utf8");
-  return source
-    .replace(/<\?xml[^>]*>/, "")
-    .replace(/<svg\b([^>]*)>/, (_match, attributes: string) => {
-      const viewBox = /viewBox="([^"]+)"/.exec(attributes)?.[1] ?? "0 0 503 296";
-      return `<svg x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" viewBox="${viewBox}" color="${color}" fill="none">`;
-    });
+async function logoSvg(brand: Brand, box: Box, color: string, logo?: Buffer | null): Promise<string> {
+  const bytes = logo === undefined ? await loadBrandLogo(brand) : logo;
+  if (bytes) return `<image x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,${bytes.toString("base64")}"/>`;
+  const size = Math.min(box.height * 0.6, box.width / Math.max(brand.name.length * 0.65, 1));
+  const mark = textBlock(brand.name, box, { font: "label", size });
+  return `<path d="${mark.d}" fill="${color}"/>`;
 }
 
 function badgeSvg(box: Box): string {
@@ -55,26 +59,26 @@ function badgeSvg(box: Box): string {
 const COPY_SIZE: Record<ExportSize, number> = { "9:16": 64, "1:1": 50, "16:9": 72 };
 
 /** Everything above the creative: panel, gradient, copy, logo, badge. Transparent over the media. */
-async function overlaySvg(layout: ExportLayout, size: ExportSize, brand: Brand, copy: string): Promise<string> {
+async function overlaySvg(layout: ExportLayout, size: ExportSize, brand: Brand, copy: string, logo?: Buffer | null): Promise<string> {
   const colors = palette(brand);
   const center = size === "9:16";
-  const text = textBlock(copy, layout.copy, { font: "display", size: COPY_SIZE[size], lineHeight: 1.18, align: center ? "center" : "left" });
+  const text = textBlock(copy, layout.copy, { font: brand.id === "tauvel" ? "display" : "label", size: COPY_SIZE[size], lineHeight: 1.18, align: center ? "center" : "left" });
   const panel = layout.panel ? `<rect x="${layout.panel.x}" y="${layout.panel.y}" width="${layout.panel.width}" height="${layout.panel.height}" fill="${colors.ground}"/>` : "";
   const gradient = layout.panel
     ? ""
     : `<defs><linearGradient id="foot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.78"/></linearGradient></defs><rect x="0" y="${layout.height * 0.62}" width="${layout.width}" height="${layout.height * 0.38}" fill="url(#foot)"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" height="${layout.height}">${gradient}${panel}<path d="${text.d}" fill="${colors.ink}"/>${await logoSvg(brand, layout.logo, colors.accent)}${badgeSvg(layout.badge)}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" height="${layout.height}">${gradient}${panel}<path d="${text.d}" fill="${colors.ink}"/>${await logoSvg(brand, layout.logo, colors.accent, logo)}${badgeSvg(layout.badge)}</svg>`;
 }
 
-async function overlayPng(layout: ExportLayout, size: ExportSize, brand: Brand, copy: string): Promise<Buffer> {
-  return sharp(Buffer.from(await overlaySvg(layout, size, brand, copy))).png().toBuffer();
+async function overlayPng(layout: ExportLayout, size: ExportSize, brand: Brand, copy: string, logo?: Buffer | null): Promise<Buffer> {
+  return sharp(Buffer.from(await overlaySvg(layout, size, brand, copy, logo))).png().toBuffer();
 }
 
 function disclosureText(disclosure: Disclosure): string {
   return JSON.stringify({ ai_generated: true, generator: "Open Ads Studio", models: disclosure.models, disclosure_basis: disclosure.basis, provenance: disclosure.provenanceRef });
 }
 
-export async function renderStill(sourcePath: string, size: ExportSize, brand: Brand, copy: string, disclosure: Disclosure): Promise<Buffer> {
+export async function renderStill(sourcePath: string, size: ExportSize, brand: Brand, copy: string, disclosure: Disclosure, logo?: Buffer | null): Promise<Buffer> {
   const layout = exportLayout(size);
   // The square crop keeps the foot of the frame and lifts the product, so the copy below never reaches the label.
   const position = size === "1:1" ? "south" : "centre";
@@ -82,7 +86,7 @@ export async function renderStill(sourcePath: string, size: ExportSize, brand: B
   return sharp({ create: { width: layout.width, height: layout.height, channels: 3, background: palette(brand).ground } })
     .composite([
       { input: media, left: layout.media.x, top: layout.media.y },
-      { input: await overlayPng(layout, size, brand, copy), left: 0, top: 0 },
+      { input: await overlayPng(layout, size, brand, copy, logo), left: 0, top: 0 },
     ])
     .withExif({ IFD0: { Software: "Open Ads Studio", ImageDescription: disclosureText(disclosure), Artist: "AI-generated (open-weight models)" } })
     .png()
@@ -90,14 +94,14 @@ export async function renderStill(sourcePath: string, size: ExportSize, brand: B
 }
 
 /** Logo end card: bottle-green ground, gold mark, tagline in the display face. */
-async function endCardPng(size: ExportSize, brand: Brand): Promise<Buffer> {
+async function endCardPng(size: ExportSize, brand: Brand, logoImage?: Buffer | null): Promise<Buffer> {
   const layout = exportLayout(size);
   const colors = palette(brand);
   const logoWidth = Math.round(Math.min(layout.width, layout.height) * 0.42);
   const logoHeight = Math.round((logoWidth * 296) / 503);
   const logo = { x: Math.round((layout.width - logoWidth) / 2), y: Math.round(layout.height / 2 - logoHeight * 0.75), width: logoWidth, height: logoHeight };
   const tagline = textBlock(brand.tagline, { x: 0, y: logo.y + logoHeight + 48, width: layout.width }, { font: "display", size: Math.round(logoWidth * 0.11), align: "center" });
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" height="${layout.height}"><rect width="100%" height="100%" fill="${colors.card}"/>${await logoSvg(brand, logo, colors.accent)}<path d="${tagline.d}" fill="${colors.ink}"/></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" height="${layout.height}"><rect width="100%" height="100%" fill="${colors.card}"/>${await logoSvg(brand, logo, colors.accent, logoImage)}<path d="${tagline.d}" fill="${colors.ink}"/></svg>`;
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
@@ -107,12 +111,12 @@ async function hasAudio(file: string): Promise<boolean> {
 }
 
 /** Clip export: the creative in the layout, then the logo end card. */
-export async function renderClip(sourcePath: string, size: ExportSize, brand: Brand, copy: string, disclosure: Disclosure, outputPath: string, workDir: string): Promise<void> {
+export async function renderClip(sourcePath: string, size: ExportSize, brand: Brand, copy: string, disclosure: Disclosure, outputPath: string, workDir: string, logo?: Buffer | null): Promise<void> {
   const layout = exportLayout(size);
   const overlay = path.join(workDir, `overlay-${size.replace(":", "x")}.png`);
   const card = path.join(workDir, `card-${size.replace(":", "x")}.png`);
-  await sharp(await overlayPng(layout, size, brand, copy)).toFile(overlay);
-  await sharp(await endCardPng(size, brand)).toFile(card);
+  await sharp(await overlayPng(layout, size, brand, copy, logo)).toFile(overlay);
+  await sharp(await endCardPng(size, brand, logo)).toFile(card);
   const audio = await hasAudio(sourcePath);
   const { media } = layout;
   const ground = palette(brand).ground.replace("#", "0x");

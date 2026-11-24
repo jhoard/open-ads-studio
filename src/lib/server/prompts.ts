@@ -2,7 +2,7 @@ import type { Brand, SceneDirection } from "@/lib/types";
 
 // Deterministic prompt templates filled from the brand kit. No language model writes these.
 
-const paletteWords = (brand: Brand): string => brand.palette.map((color) => color.token.replace(/-/g, " ")).join(", ");
+const paletteWords = (brand: Brand): string => brand.palette.map((color) => `${color.token.replace(/-/g, " ")} (${color.hex})`).join(", ");
 
 // The model renders an empty set; the real product is composited on top afterwards.
 // The camera matches the straight-on packshot, and the center stays clear where the product goes.
@@ -28,12 +28,13 @@ export function vfxPrompt(brand: Brand, direction: SceneDirection): string {
 }
 
 /** Scene (relight in place): the packshot stays where it is; the model rebuilds the set and the light around it. */
-export function relightPrompt(direction: SceneDirection): string {
+export function relightPrompt(direction: SceneDirection, brand?: Brand): string {
   return (
-    "Keep the product box exactly as it is: same position, same size, straight-on, same packaging and lettering. " +
-    `Replace only the background and surface: the box stands on ${direction.surface}, lit by ${direction.light}, ` +
-    `${direction.props}, a soft reflection of the box on the surface under it, and a contact shadow at its base. ` +
-    "Relight the box to match. Photographic, premium still life."
+    "Keep the product exactly as it is: same position, same size, straight-on, same shape, packaging and lettering. " +
+    `Replace only the background and surface: the product stands on ${direction.surface}, lit by ${direction.light}, ` +
+    `${direction.props}, and a contact shadow at its base. ` +
+    "Relight the product to match. Photographic, premium still life." +
+    (brand ? ` Set palette: ${paletteWords(brand)}. Brand mood: ${brand.tone}. Apply these to the set only; preserve the product's own colors and label.` : "")
   );
 }
 
@@ -44,6 +45,6 @@ export const REVEAL_SOUND = " Sound: soft foil crinkle, quiet studio room tone."
 
 /** Cinemagraph: the finished Scene still is both keyframes; only the ambient elements move. */
 export const CINEMAGRAPH_PROMPT =
-  "The chocolate box stays perfectly still. Steam slowly curls up from the espresso cup, the light beam drifts gently across the dark wall, " +
-  "faint dust motes turn in the beam. Locked-off camera. Sound: quiet room tone, a faint cup clink.";
+  "The product and all lettering stay perfectly still. The existing background light shifts gently while the scene composition stays unchanged. " +
+  "Keep all existing props in place. Locked-off camera. Sound: quiet room tone.";
 export const CINEMAGRAPH_SECONDS = 5;

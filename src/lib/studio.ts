@@ -29,6 +29,12 @@ export interface BrandSafety {
   disclosureBasis: string[];
 }
 
+/** Unknown categories keep conservative phrase checks without claiming the product is a supplement. */
+export function safetyForCreative(creative: Pick<Creative, "brand" | "productId">, sample: BrandSafety): BrandSafety {
+  if ((creative.productId ?? "tauvel") === "tauvel") return sample;
+  return { ...sample, category: "Unclassified product", subcategories: [], riskRating: "medium", riskReason: "Product category has not been assessed. Automated copy checks do not replace a brand review.", disclosureRequirements: sample.disclosureRequirements.slice(0, 1) };
+}
+
 /** Why the studio is or is not generating right now, and what this visitor has left today. */
 export type FallbackReason = "demo-mode" | "no-key" | "no-guard" | "visitor-scene" | "visitor-video" | "global" | "comfy-error";
 

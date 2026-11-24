@@ -2,7 +2,7 @@ import type { Creative } from "./studio";
 
 export function reviewCreativeKey(creative: Creative, copy: Record<string, string>): string {
   return creative.demo && creative.status === "succeeded" && creative.outputUrl
-    ? JSON.stringify(["example", creative.recipe, creative.outputKind, creative.outputUrl, creative.rawUrl, creative.objective ?? "awareness", copy[creative.id] ?? null])
+    ? JSON.stringify(["example", creative.brand, creative.productId, creative.recipe, creative.outputKind, creative.outputUrl, creative.rawUrl, creative.objective ?? "awareness", copy[creative.id] ?? null])
     : JSON.stringify(["job", creative.id]);
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import type { BrandKit } from "@/lib/brand-kit";
+import { emptyKit, neutralDirections, readBrand, restoreKit, type BrandKit } from "@/lib/brand-kit";
 import { useCreatives, type CreateRequest } from "@/lib/client/useCreatives";
 import { useUploadedProduct } from "@/lib/client/useUploadedProduct";
 import { MASK_THRESHOLD, type MaskBox } from "@/lib/glyph-mask";
@@ -62,7 +62,7 @@ export function Studio() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const studio = useCreatives();
   const uploads = useUploadedProduct();
-  const [choice, setChoice] = useState<ProductChoice>("tauvel");
+  const [choice, setChoice] = useState<ProductChoice>("upload");
   const [boxes, setBoxes] = useState<MaskBox[]>([]);
   const [threshold, setThreshold] = useState<number>(MASK_THRESHOLD.default);
   const [live, setLive] = useState<LiveStatus | null>(null);
@@ -78,11 +78,26 @@ export function Studio() {
           return;
         }
         setData(body);
-        setBrand(body.brand);
+        let initial = emptyKit(body.directionCatalog);
+        try {
+          const saved = window.localStorage.getItem("open-ads-studio.brand");
+          if (saved) initial = restoreKit(JSON.parse(saved));
+        } catch { /* Unavailable or obsolete storage: start at import. */ }
+        setBrand(initial);
+        setChoice(initial.source === "cached" ? "tauvel" : "upload");
         setLive(body.live);
       })
       .catch(() => setLoadError("Could not reach the server."));
   }, []);
+
+  const updateBrand = (next: BrandKit): void => {
+    setBrand(next);
+    if (brand?.source !== next.source || brand?.id !== next.id) {
+      setChoice(next.source === "cached" ? "tauvel" : "upload");
+      setProtectConfirmed(false);
+    }
+    try { window.localStorage.setItem("open-ads-studio.brand", JSON.stringify(next)); } catch { /* Keep working in memory. */ }
+  };
 
   useEffect(() => {
     if (previousStep.current === step) return;
@@ -115,7 +130,8 @@ export function Studio() {
   };
 
   // A returning visitor with Tauvel creatives already made has been through Protect.
-  const reviewCreatives = distinctReviewCreatives(studio.creatives, studio.copy, studio.approved);
+  const workspaceCreatives = studio.creatives.filter((creative) => (creative.brand?.id ?? "tauvel") === brand?.id && productOf(creative) === activeProductId);
+  const reviewCreatives = distinctReviewCreatives(workspaceCreatives, studio.copy, studio.approved);
   const hasCreatives = reviewCreatives.length > 0;
   useEffect(() => {
     if (hasCreatives && choice === "tauvel") setProtectConfirmed(true);
@@ -132,21 +148,23 @@ export function Studio() {
 
   const onCreatePreview = useCallback((preview: CreatePreview) => setCreatePreview(preview), []);
 
-  // Tauvel is preloaded, so Product is open from the start. An upload unlocks Create once its mask is saved and confirmed.
-  const unlocked = [true, true, protectConfirmed && (choice === "tauvel" || uploadReady), hasCreatives, studio.approved.size > 0];
+  let brandReady = false;
+  try { if (brand && brand.source !== "empty") { readBrand(brand); brandReady = true; } } catch { /* Keep invalid edits in Brand until corrected. */ }
   const approvedCreatives = reviewCreatives.filter((creative) => studio.approved.has(creative.id) && creative.outputUrl);
+  const unlocked = [true, brandReady, brandReady && protectConfirmed && (choice === "tauvel" || uploadReady), hasCreatives, approvedCreatives.length > 0];
   const sceneSourceId =
-    studio.creatives.find((creative) => !creative.demo && creative.stage === "scene-relight" && creative.status === "succeeded" && productOf(creative) === activeProductId)?.id ?? null;
+    workspaceCreatives.find((creative) => !creative.demo && creative.stage === "scene-relight" && creative.status === "succeeded")?.id ?? null;
   const lastFallback = studio.creatives[0]?.fallback?.message ?? null;
   const pool = step === EXPORT ? approvedCreatives : reviewCreatives;
   const selected = pool.find((creative) => creative.id === selectedId) ?? pool[0] ?? null;
 
   const create = async (requests: CreateRequest[], objective: Objective): Promise<void> => {
-    await studio.create(
-      requests.map((request) => ({ ...request, productId: activeProductId })),
+    const made = await studio.create(
+      requests.map((request) => ({ ...request, productId: activeProductId, brand: readBrand(brand) })),
       objective,
     );
     refreshLive();
+    if (!made) return;
     setSelectedId(null);
     setStep(REVIEW);
   };
@@ -193,6 +211,7 @@ export function Studio() {
       const example = recipe.id === "scene" ? DIRECTION_EXAMPLES[createPreview.directionId ?? ""] : recipe.example;
       const title = recipe.id === "scene" && direction ? `${recipe.label}: ${direction.label}` : recipe.label;
       const detail = [...recipe.models, ...recipe.workflows].join(", ");
+      if (choice === "upload") return { media: uploads.product?.packshotUrl ? { kind: "image", url: uploads.product.packshotUrl } : null, title, detail: "Your product reference. The generated scene will appear in Review.", empty: "Upload your product to create a scene." };
       if (!example) return { media: null, title, detail, empty: `${direction?.label ?? "This direction"} has no approved render yet. It still runs live.` };
       return { media: { kind: example.kind, url: example.url, posterUrl: example.posterUrl }, title, detail: example.labelMatch ? `${detail}. Label match ${percent(example.labelMatch)}` : detail };
     }
@@ -244,7 +263,7 @@ export function Studio() {
                 <span className="visually-hidden">{index === step ? ", current step" : !unlocked[index] ? ", unavailable" : ""}</span>
               </button>
               {!unlocked[index] && <span id={`step-${entry.id}-reason`} className="visually-hidden">
-                {index === CREATE ? "Confirm product protection in Product first." : index === REVIEW ? "Create a creative first." : "Approve a creative in Review first."}
+                {index === PRODUCT ? "Import your website or brand .md first." : index === CREATE ? "Confirm product protection in Product first." : index === REVIEW ? "Create a creative first." : "Approve a creative in Review first."}
               </span>}
             </li>
           ))}
@@ -261,7 +280,7 @@ export function Studio() {
         {live && <LiveBanner live={live} lastFallback={lastFallback} />}
         {data && brand ? (
           <>
-            {step === BRAND && <BrandStep kit={brand} catalog={data.directionCatalog} onKit={setBrand} />}
+            {step === BRAND && <BrandStep kit={brand} catalog={brand.source === "cached" ? data.directionCatalog : neutralDirections(data.directionCatalog)} onKit={updateBrand} sample={data.brand} />}
             {step === PRODUCT && (
               <ProductStep
                 product={data.product}
@@ -288,9 +307,10 @@ export function Studio() {
             {step === CREATE && (
               <CreateStep
                 directions={brand.sceneDirections}
+                showExamples={choice === "tauvel"}
                 available={{
                   "reveal-keyframes": activeProductId === "tauvel" && (data.mode === "demo" || data.product.reveal !== null),
-                  "scene-still": data.mode === "demo" || sceneSourceId !== null,
+                  "scene-still": (choice === "tauvel" && data.mode === "demo") || sceneSourceId !== null,
                 }}
                 sceneSourceId={sceneSourceId}
                 mode={data.mode}
@@ -326,7 +346,7 @@ export function Studio() {
 
             <div className="step-nav">
               <p className="step-nav-hint">
-                {step === BRAND ? "Review your kit, then add your product." : step === PRODUCT && !protectConfirmed ? "Confirm product protection to continue." : step === REVIEW && studio.approved.size === 0 ? "Approve a creative to unlock exports." : `Step ${step + 1} of ${STEPS.length}`}
+                {step === BRAND ? brandReady ? "Review your kit, then add your product." : "Import your website or brand .md to continue." : step === PRODUCT && !protectConfirmed ? "Confirm product protection to continue." : step === REVIEW && approvedCreatives.length === 0 ? "Approve a creative to unlock exports." : `Step ${step + 1} of ${STEPS.length}`}
               </p>
               <div className="step-nav-buttons">
               {step > 0 && (
@@ -357,7 +377,7 @@ export function Studio() {
           empty={preview.empty}
           comparison={preview.comparison}
           overlay={protectOverlay}
-          custom={step === BRAND && brand ? <BrandPreview kit={brand} /> : undefined}
+          custom={step === BRAND && brand && brand.source !== "empty" ? <BrandPreview kit={brand} /> : undefined}
         />
       )}
     </div>

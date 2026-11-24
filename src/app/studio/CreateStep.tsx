@@ -22,6 +22,7 @@ interface CreateStepProps {
   /** The finished Scene a cinemagraph animates, when there is one. */
   sceneSourceId: string | null;
   mode: "live" | "demo";
+  showExamples: boolean;
   submitting: boolean;
   error: string | null;
   onPreview: (preview: CreatePreview) => void;
@@ -30,16 +31,17 @@ interface CreateStepProps {
 
 const recipeOf = (id: RecipeId): RecipeInfo => findRecipe(id) as RecipeInfo;
 
-export function CreateStep({ directions, available, sceneSourceId, mode, submitting, error, onPreview, onCreate }: CreateStepProps) {
+export function CreateStep({ directions, available, sceneSourceId, mode, showExamples, submitting, error, onPreview, onCreate }: CreateStepProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set(["scene"]));
   const [focusCard, setFocusCard] = useState("scene");
   const [variants, setVariants] = useState<Record<string, RecipeId>>(() => Object.fromEntries(RECIPE_CARDS.map((card) => [card.id, card.variants[0].recipe])));
   const [directionId, setDirectionId] = useState(directions[0]?.id);
   const [objective, setObjective] = useState<Objective>("awareness");
+  const activeDirectionId = directions.some((direction) => direction.id === directionId) ? directionId : directions[0]?.id;
 
   useEffect(() => {
-    onPreview({ recipe: variants[focusCard], directionId });
-  }, [focusCard, variants, directionId, onPreview]);
+    onPreview({ recipe: variants[focusCard], directionId: activeDirectionId });
+  }, [focusCard, variants, activeDirectionId, onPreview]);
 
   const reasonFor = (recipe: RecipeInfo): string | null => (recipe.needs && !available[recipe.needs] ? NEED_REASON[recipe.needs] : null);
 
@@ -64,7 +66,7 @@ export function CreateStep({ directions, available, sceneSourceId, mode, submitt
     onCreate(
       picked.map((card) => {
         const recipe = variants[card.id];
-        if (recipe === "scene") return { recipe, directionId };
+        if (recipe === "scene") return { recipe, directionId: activeDirectionId };
         if (recipe === "cinemagraph" && sceneSourceId) return { recipe, sourceCreativeId: sceneSourceId };
         return { recipe };
       }),
@@ -91,8 +93,8 @@ export function CreateStep({ directions, available, sceneSourceId, mode, submitt
 
       <div className="field">
         <span className="field-label">Scene direction</span>
-        <DirectionSwatches directions={directions} value={directionId} onChange={pickDirection} />
-        <span className="hint">From the brand kit. Slate beam, Travertine morning and Dark stone evening have approved renders.</span>
+        <DirectionSwatches directions={directions} value={activeDirectionId} onChange={pickDirection} />
+        <span className="hint">From your brand kit. Edit surfaces, props and lighting in Brand.</span>
       </div>
 
       <div className="field">
@@ -105,6 +107,7 @@ export function CreateStep({ directions, available, sceneSourceId, mode, submitt
                 key={card.id}
                 card={card}
                 recipe={recipe}
+                showExample={showExamples}
                 selected={selected.has(card.id)}
                 disabledReason={reasonFor(recipe)}
                 onToggle={() => toggle(card.id)}

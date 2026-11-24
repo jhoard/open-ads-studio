@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { ClaimsCheck } from "@/lib/claims-guard";
 import type { BrandSafety } from "@/lib/studio";
-import type { StageName } from "@/lib/types";
+import type { Brand, StageName } from "@/lib/types";
 
 // Provenance on every export (docs/brand-safety-ontology.md, section 5).
 
@@ -24,11 +24,9 @@ async function gitSha(): Promise<string> {
   }
 }
 
-async function fileHash(file: string): Promise<string> {
-  return createHash("sha256").update(await readFile(file)).digest("hex").slice(0, 12);
-}
-
 export interface ProvenanceInput {
+  brand: Brand;
+  productId: string;
   stage: StageName;
   label: string;
   seed: number | null;
@@ -56,7 +54,8 @@ export async function buildProvenance(input: ProvenanceInput): Promise<Record<st
     models: stage.models,
     open_weights_only: true,
     seed: input.seed,
-    brand_ref: `brand.json@${await fileHash(path.join(process.cwd(), "assets", "tauvel", "brand.json"))}`,
+    brand_ref: `brand.json@${createHash("sha256").update(JSON.stringify(input.brand)).digest("hex").slice(0, 12)}`,
+    brand: input.brand.name,
     generated_at: input.generatedAt,
     exported_at: new Date().toISOString(),
     reviewed_by: null,
@@ -72,6 +71,6 @@ export async function buildProvenance(input: ProvenanceInput): Promise<Record<st
       disclosure_requirements: input.safety.disclosureRequirements,
     },
     disclosure_basis: input.safety.disclosureBasis,
-    input_assets: "Packshots made with GPT Image (the brand owner's own IP); all generation in the app is open weights.",
+    input_assets: input.productId === "tauvel" ? "Sample packshots made with GPT Image (the brand owner's own IP); all generation in the app is open weights." : "Product photo uploaded by the user; all generation in the app is open weights.",
   };
 }

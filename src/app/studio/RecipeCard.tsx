@@ -8,6 +8,7 @@ interface RecipeCardProps {
   /** The recipe behind the active variant. */
   recipe: RecipeInfo;
   selected: boolean;
+  showExample?: boolean;
   /** Why the card cannot be picked right now; null when it can. */
   disabledReason: string | null;
   onToggle: () => void;
@@ -24,7 +25,7 @@ function CheckMark() {
   );
 }
 
-export function RecipeCard({ card, recipe, selected, disabledReason, onToggle, onVariant }: RecipeCardProps) {
+export function RecipeCard({ card, recipe, selected, showExample = true, disabledReason, onToggle, onVariant }: RecipeCardProps) {
   const id = useId();
   const video = useRef<HTMLVideoElement>(null);
   const disabled = disabledReason !== null;
@@ -67,7 +68,7 @@ export function RecipeCard({ card, recipe, selected, disabledReason, onToggle, o
         onBlur={rest}
       >
         <div className="recipe-media">
-          {example.kind === "image" ? (
+          {!showExample ? <span className="recipe-placeholder">{recipe.kind === "still" ? "Your product in a brand scene" : "Your product in motion"}</span> : example.kind === "image" ? (
             <img src={example.url} alt="" loading="lazy" />
           ) : (
             <video ref={video} key={example.url} src={example.url} poster={example.posterUrl} muted loop playsInline preload="none" aria-hidden="true" />

@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import type { BrandKit } from "@/lib/brand-kit";
+import { safeWebUrl, type BrandKit } from "@/lib/brand-kit";
 
 function kitFont(kit: BrandKit): string {
   if (kit.source === "cached") return "var(--font-brand)";
@@ -13,8 +13,8 @@ function Mark({ kit }: { kit: BrandKit }) {
   if (kit.logoKind === "mask" && kit.logoUrl) {
     return <div className="brand-lockup-mark" style={{ "--logo-url": `url(${kit.logoUrl})` } as CSSProperties} role="img" aria-label={`${kit.name} logo`} />;
   }
-  if (kit.logoUrl) {
-    return <img className="brand-lockup-logo" src={kit.logoUrl} alt={`${kit.name} logo`} referrerPolicy="no-referrer" />;
+  if (safeWebUrl(kit.logoUrl)) {
+    return <img className="brand-lockup-logo" src={safeWebUrl(kit.logoUrl)} alt={`${kit.name} logo`} referrerPolicy="no-referrer" />;
   }
   return <p className="brand-lockup-name">{kit.name}</p>;
 }

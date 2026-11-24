@@ -4,15 +4,19 @@ import os from "node:os";
 import path from "node:path";
 import { strToU8, zipSync } from "fflate";
 import { NextResponse } from "next/server";
+import { readBrand } from "@/lib/brand-kit";
 import { checkClaims } from "@/lib/claims-guard";
 import { EXPORT_SIZES, type ExportSize } from "@/lib/export-layout";
 import { DIRECTION_EXAMPLES } from "@/lib/directions";
 import { RECIPES, findRecipe } from "@/lib/recipes";
 import { loadBrand, loadBrandSafety } from "@/lib/server/catalog";
 import { renderClip, renderStill } from "@/lib/server/export-render";
+import { loadBrandLogo } from "@/lib/server/brand-logo";
 import { findJob, localOutput } from "@/lib/server/jobs";
 import { STAGE_MODELS, buildProvenance } from "@/lib/server/provenance";
-import type { ApiError, StageName } from "@/lib/types";
+import type { ApiError, Brand, StageName } from "@/lib/types";
+import { currentVisitor } from "@/lib/server/visitor";
+import { safetyForCreative } from "@/lib/studio";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -21,6 +25,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 const MAX_COPY_LENGTH = 140;
 
 interface ExportBody {
+  brand?: unknown;
   creativeId?: unknown;
   recipe?: unknown;
   demo?: unknown;
@@ -31,6 +36,8 @@ interface ExportBody {
 }
 
 interface Source {
+  brand: Brand;
+  productId: string;
   file: string;
   kind: "image" | "video";
   stage: StageName;
@@ -46,7 +53,7 @@ interface Source {
 const fail = (status: number, error: string): NextResponse<ApiError> => NextResponse.json({ error }, { status });
 
 /** Demo creatives export their bundled example; live ones export the finished job output. */
-async function resolveSource(body: ExportBody): Promise<Source | string> {
+async function resolveSource(body: ExportBody, visitor: string): Promise<Source | string> {
   if (body.demo === true) {
     const recipe = typeof body.recipe === "string" ? findRecipe(body.recipe) : undefined;
     if (!recipe) return "Unknown recipe.";
@@ -54,12 +61,17 @@ async function resolveSource(body: ExportBody): Promise<Source | string> {
     const known = new Set([...RECIPES.map((entry) => entry.example.url), ...Object.values(DIRECTION_EXAMPLES).map((entry) => entry.url)]);
     const url = typeof body.exampleUrl === "string" && known.has(body.exampleUrl) ? body.exampleUrl : recipe.example.url;
     const file = path.join(process.cwd(), "public", url.replace(/^\//, ""));
-    return { file, kind: recipe.example.kind, stage: recipe.stage, label: recipe.label, seed: null, generatedAt: null, labelMatch: recipe.example.labelMatch ?? null, example: true, fromScene: recipe.id === "cinemagraph" };
+    let brand: Brand;
+    try { brand = body.brand === undefined ? await loadBrand() : readBrand(body.brand); } catch { return "Invalid brand kit."; }
+    return { file, brand, productId: "tauvel", kind: recipe.example.kind, stage: recipe.stage, label: recipe.label, seed: null, generatedAt: null, labelMatch: recipe.example.labelMatch ?? null, example: true, fromScene: recipe.id === "cinemagraph" };
   }
   if (typeof body.creativeId !== "string" || !UUID_PATTERN.test(body.creativeId)) return "Missing creative.";
   const job = await findJob(body.creativeId);
+  if (job?.visitor && job.visitor !== visitor) return "That creative is not in your workspace.";
   if (!job || job.status !== "succeeded" || !job.outputFile || !job.outputKind) return "That creative is not ready to export.";
   return {
+    brand: job.brand ?? await loadBrand(),
+    productId: job.productId ?? "tauvel",
     file: await localOutput(job.outputFile),
     kind: job.outputKind,
     stage: job.stage,
@@ -78,6 +90,7 @@ export async function POST(request: Request): Promise<Response> {
   let body: ExportBody;
   try {
     body = (await request.json()) as ExportBody;
+    if (!body || typeof body !== "object") return fail(400, "Expected a JSON object.");
   } catch {
     return fail(400, "Expected a JSON body.");
   }
@@ -86,13 +99,13 @@ export async function POST(request: Request): Promise<Response> {
   if (typeof body.copy !== "string" || !body.copy.trim() || body.copy.length > MAX_COPY_LENGTH) return fail(400, `Copy line must be 1 to ${MAX_COPY_LENGTH} characters.`);
   const copy = body.copy.trim();
 
-  const [brand, safety] = await Promise.all([loadBrand(), loadBrandSafety()]);
+  const source = await resolveSource(body, (await currentVisitor()).id);
+  if (typeof source === "string") return fail(400, source);
+  const brand = source.brand;
+  const safety = safetyForCreative(source, await loadBrandSafety());
   // Checked again here: the browser's verdict is a convenience, the server's is the gate.
   const claims = checkClaims(copy, safety.claimsGuard);
   if (claims.status === "blocked") return fail(422, `Copy line blocked by the claims guard: ${claims.blocked.join(", ")}.`);
-
-  const source = await resolveSource(body);
-  if (typeof source === "string") return fail(400, source);
 
   const workDir = path.join(os.tmpdir(), `oas-export-${randomUUID()}`);
   await mkdir(workDir, { recursive: true });
@@ -100,19 +113,21 @@ export async function POST(request: Request): Promise<Response> {
     const models = [...(source.fromScene ? (STAGE_MODELS["scene-relight"]?.models ?? []) : []), ...(STAGE_MODELS[source.stage]?.models ?? [])];
     const disclosure = { models, basis: safety.disclosureBasis, provenanceRef: "provenance.json" };
     const files: Record<string, Uint8Array> = {};
-    const base = slug(`tauvel ${source.label}`);
+    const base = slug(`${brand.name} ${source.label}`) || "creative";
+    const logo = await loadBrandLogo(brand);
     for (const size of sizes) {
       const name = `${base}-${size.replace(":", "x")}`;
       if (source.kind === "image") {
-        files[`${name}.png`] = new Uint8Array(await renderStill(source.file, size, brand, copy, disclosure));
+        files[`${name}.png`] = new Uint8Array(await renderStill(source.file, size, brand, copy, disclosure, logo));
       } else {
         const out = path.join(workDir, `${name}.mp4`);
-        await renderClip(source.file, size, brand, copy, disclosure, out, workDir);
+        await renderClip(source.file, size, brand, copy, disclosure, out, workDir, logo);
         files[`${name}.mp4`] = new Uint8Array(await readFile(out));
       }
     }
     const provenance = await buildProvenance({ ...source, copy, claims, safety, sizes });
     files["provenance.json"] = strToU8(JSON.stringify(provenance, null, 2));
+    files["brand.json"] = strToU8(JSON.stringify(brand, null, 2));
     files["DISCLOSURE.txt"] = strToU8(
       `AI-generated with open-weight models: ${models.join(", ")}.\nDisclosure basis: ${safety.disclosureBasis.join("; ")}.\n${safety.disclosureRequirements.join("\n")}\n` +
         (claims.flagged.length ? `Needs substantiation before running: ${claims.flagged.join(", ")}.\n` : ""),
